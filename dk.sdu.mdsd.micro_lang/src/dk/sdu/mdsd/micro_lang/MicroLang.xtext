@@ -1,0 +1,56 @@
+grammar dk.sdu.mdsd.micro_lang.MicroLang with org.eclipse.xtext.common.Terminals
+
+generate microLang "http://www.sdu.dk/mdsd/micro_lang/MicroLang"
+
+Model:
+	microservices+=Microservice*
+;
+	
+Microservice:
+	'microservice' name=ID location=Location '{'
+		endpoints+=Endpoint+
+	'}'
+;
+
+Location:
+	'@' location=ID ':' port=INT
+;
+
+Endpoint:
+	method=Method path=Path ('{'
+		parameters+=Parameter*
+		(returnType=ReturnType)?
+	'}')?
+;
+
+Method:
+	'GET' | 'POST' | 'PUT' | 'DELETE' | 'OPTIONS'
+;
+
+Path:
+	parts+=PathPart+
+;
+
+PathPart:
+	'/' (NormalPath | ParameterPath)?
+;
+
+NormalPath:
+	ID
+;
+
+ParameterPath:
+	'{' ID '}'
+;
+
+Parameter:
+	type=Type name=ID
+;
+
+ReturnType:
+	'return' type=Type
+;
+
+Type:
+	('bool' | 'char' | 'string' | 'int' | 'long' | 'float' | 'double') ('['']')?
+;
