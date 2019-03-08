@@ -11,8 +11,9 @@ import org.eclipse.xtext.testing.util.ParseHelper
 import org.eclipse.xtext.testing.validation.ValidationTestHelper
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.^extension.ExtendWith
-
-import static extension org.junit.Assert.*
+import static org.junit.Assert.assertTrue
+import static org.junit.Assert.assertNull
+import static extension org.junit.Assert.assertEquals
 
 @ExtendWith(InjectionExtension)
 @InjectWith(MicroLangInjectorProvider)
