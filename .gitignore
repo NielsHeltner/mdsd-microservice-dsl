@@ -19,12 +19,14 @@
 *.tar.gz
 *.rar
 
-target
-bin
+target/
+bin/
 .antlr*.jar
-*-gen
-*-bin
+*-gen/
+*-bin/
 model
+target
+*/generated/
 
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
