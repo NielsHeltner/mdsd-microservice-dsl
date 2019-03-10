@@ -46,9 +46,9 @@ class MicroLangValidator extends AbstractMicroLangValidator {
 	}
 	
 	@Check
-	def checkMicroserviceNameCapitalSnakeCase(Microservice microservice) {
+	def checkMicroserviceNameIsUpperCase(Microservice microservice) {
 		if (!microservice.name.equals(microservice.name.toUpperCase)) {
-			warning('Microservice name should be written in capitals', 
+			warning('Microservice name should be written in upper case', 
 				MicroLangPackage.eINSTANCE.microservice_Name, 
 				INVALID_MICROSERVICE_NAME, 
 				microservice.name)
@@ -56,17 +56,17 @@ class MicroLangValidator extends AbstractMicroLangValidator {
 	}
 	
 	@Check
-	def checkEndpointNameLowerFlatCase(Endpoint endpoint) {
-		for (PathPart part : endpoint.normalPathParts) {
-			val name = part.path
+	def checkEndpointPathIsLowerCase(Endpoint endpoint) {
+		endpoint.normalPathParts.forEach[
+			val name = path
 			if (!name.equals(name.toLowerCase)) {
 				warning('Endpoint path should be written in lower case', 
 					MicroLangPackage.eINSTANCE.endpoint_PathParts, 
-					endpoint.pathParts.indexOf(part), 
+					endpoint.pathParts.indexOf(it), 
 					INVALID_ENDPOINT_PATH_NAME, 
 					name)
 			}
-		}
+		]
 	}
 	
 	@Check
