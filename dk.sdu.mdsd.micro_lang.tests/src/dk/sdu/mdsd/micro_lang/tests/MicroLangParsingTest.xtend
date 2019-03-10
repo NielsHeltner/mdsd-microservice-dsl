@@ -62,7 +62,7 @@ class MicroLangParsingTest {
 		val endpoint = microservice.endpoints.head
 		
 		'GET'.assertEquals(endpoint.method)
-		'/login'.assertEquals(endpoint.path.parts.head)
+		'/login'.assertEquals(endpoint.pathPartsString.head)
 		assertTrue(endpoint.parameters.empty)
 		assertNull(endpoint.returnType)
 	}
@@ -79,7 +79,7 @@ class MicroLangParsingTest {
 		val endpoint = microservice.endpoints.head
 		
 		'GET'.assertEquals(endpoint.method)
-		'/'.assertEquals(endpoint.path.parts.head)
+		'/'.assertEquals(endpoint.pathPartsString.head)
 		assertTrue(endpoint.parameters.empty)
 		assertNull(endpoint.returnType)
 	}
@@ -101,11 +101,11 @@ class MicroLangParsingTest {
 		val endpoints = microservice.endpoints
 		
 		'GET'.assertEquals(endpoints.get(0).method)
-		'/login'.assertEquals(endpoints.get(0).path.parts.head)
+		'/login'.assertEquals(endpoints.get(0).pathPartsString.head)
 		'POST'.assertEquals(endpoints.get(1).method)
-		'/'.assertEquals(endpoints.get(1).path.parts.head)
+		'/'.assertEquals(endpoints.get(1).pathPartsString.head)
 		'DELETE'.assertEquals(endpoints.get(2).method)
-		'/user'.assertEquals(endpoints.get(2).path.parts.head)
+		'/user'.assertEquals(endpoints.get(2).pathPartsString.head)
 	}
 	
 	@Test
@@ -119,11 +119,11 @@ class MicroLangParsingTest {
 		val microservice = model.microservices.head
 		val endpoint = microservice.endpoints.head
 		
-		2.assertEquals(endpoint.path.parts.size)
+		2.assertEquals(endpoint.pathParts.size)
 		
 		'GET'.assertEquals(endpoint.method)
-		'/login'.assertEquals(endpoint.path.parts.head)
-		'/{userId}'.assertEquals(endpoint.path.parts.last)
+		'/login'.assertEquals(endpoint.pathPartsString.head)
+		'/{userId}'.assertEquals(endpoint.pathPartsString.last)
 	}
 	
 	@Test

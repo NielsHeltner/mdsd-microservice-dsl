@@ -17,7 +17,6 @@ import dk.sdu.mdsd.micro_lang.microLang.Endpoint
 class MicroLangGenerator extends AbstractGenerator {
 
 	override void doGenerate(Resource resource, IFileSystemAccess2 fsa, IGeneratorContext context) {
-		fsa.generateFile('paths.txt', resource.allContents.filter(Endpoint).map[path].join('\r\n'))
 //		fsa.generateFile('greetings.txt', 'People to greet: ' + 
 //			resource.allContents
 //				.filter(Greeting)
