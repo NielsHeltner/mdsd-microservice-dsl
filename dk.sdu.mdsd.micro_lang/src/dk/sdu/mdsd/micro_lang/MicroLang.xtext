@@ -8,6 +8,7 @@ Model:
 	
 Microservice:
 	'microservice' name=ID location=Location '{'
+		('uses' uses+=[Microservice])*
 		endpoints+=Endpoint*
 	'}'
 ;

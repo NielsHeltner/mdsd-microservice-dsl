@@ -14,6 +14,7 @@ import org.junit.jupiter.api.^extension.ExtendWith
 import static org.junit.Assert.assertTrue
 import static org.junit.Assert.assertNull
 import static extension org.junit.Assert.assertEquals
+import static extension org.junit.Assert.assertSame
 
 @ExtendWith(InjectionExtension)
 @InjectWith(MicroLangInjectorProvider)
@@ -220,6 +221,26 @@ class MicroLangParsingTest {
 		2.assertEquals(firstMicroservice.endpoints.size)
 		3.assertEquals(secondMicroservice.endpoints.size)
 		2.assertEquals(thirdMicroservice.endpoints.size)
+	}
+	
+	@Test
+	def testUsesOtherMicroservice() {
+		val model = '''
+			microservice TEST_SERVICE @ localhost:5000 {
+			}
+			microservice SECOND_SERVICE @ localhost:5001 {
+			}
+			microservice MOVIE_SERVICE @ localhost:5002 {
+				uses TEST_SERVICE
+				uses SECOND_SERVICE
+			}
+		'''.parse
+		model.assertNoErrors
+		val microservices = model.microservices
+		val uses = microservices.last.uses
+		2.assertEquals(uses.size)
+		microservices.get(0).assertSame(uses.get(0))
+		microservices.get(1).assertSame(uses.get(1))
 	}
 	
 }
