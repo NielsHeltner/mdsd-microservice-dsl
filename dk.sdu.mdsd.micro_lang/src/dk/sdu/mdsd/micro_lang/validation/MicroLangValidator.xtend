@@ -3,13 +3,12 @@
  */
 package dk.sdu.mdsd.micro_lang.validation
 
-import org.eclipse.xtext.validation.Check
+import com.google.inject.Inject
+import dk.sdu.mdsd.micro_lang.MicroLangModelUtil
+import dk.sdu.mdsd.micro_lang.microLang.Endpoint
 import dk.sdu.mdsd.micro_lang.microLang.MicroLangPackage
 import dk.sdu.mdsd.micro_lang.microLang.Microservice
-import dk.sdu.mdsd.micro_lang.microLang.Endpoint
-import dk.sdu.mdsd.micro_lang.MicroLangModelUtil
-import com.google.inject.Inject
-import dk.sdu.mdsd.micro_lang.microLang.PathPart
+import org.eclipse.xtext.validation.Check
 
 /**
  * This class contains custom validation rules. 
