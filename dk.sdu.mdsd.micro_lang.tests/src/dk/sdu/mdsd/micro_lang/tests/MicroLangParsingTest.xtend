@@ -4,6 +4,7 @@
 package dk.sdu.mdsd.micro_lang.tests
 
 import com.google.inject.Inject
+import dk.sdu.mdsd.micro_lang.MicroLangModelUtil
 import dk.sdu.mdsd.micro_lang.microLang.Model
 import org.eclipse.xtext.testing.InjectWith
 import org.eclipse.xtext.testing.extensions.InjectionExtension
@@ -11,8 +12,10 @@ import org.eclipse.xtext.testing.util.ParseHelper
 import org.eclipse.xtext.testing.validation.ValidationTestHelper
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.^extension.ExtendWith
-import static org.junit.Assert.assertTrue
+
 import static org.junit.Assert.assertNull
+import static org.junit.Assert.assertTrue
+
 import static extension org.junit.Assert.assertEquals
 import static extension org.junit.Assert.assertSame
 
@@ -25,6 +28,9 @@ class MicroLangParsingTest {
 	
 	@Inject
 	extension ValidationTestHelper
+	
+	@Inject
+	extension MicroLangModelUtil
 	
 	@Test
 	def testMicroserviceNoEndpoints() {

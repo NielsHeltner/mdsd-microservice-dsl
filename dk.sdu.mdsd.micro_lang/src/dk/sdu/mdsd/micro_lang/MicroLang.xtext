@@ -19,8 +19,7 @@ Location:
 
 Endpoint:
 	method=Method path=Path ('{'
-		parameters+=Parameter*
-		(returnType=ReturnType)?
+		statements+=Statement*
 	'}')?
 ;
 
@@ -44,11 +43,15 @@ ParameterPath:
 	'{' ID '}'
 ;
 
+Statement:
+	Parameter | Return
+;
+
 Parameter:
 	type=Type name=ID
 ;
 
-ReturnType:
+Return:
 	'return' type=Type
 ;
 
