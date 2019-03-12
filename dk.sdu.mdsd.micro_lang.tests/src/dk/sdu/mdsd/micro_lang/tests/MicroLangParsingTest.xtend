@@ -62,7 +62,7 @@ class MicroLangParsingTest {
 		val endpoint = microservice.endpoints.head
 		
 		'GET'.assertEquals(endpoint.method)
-		'/login'.assertEquals(endpoint.pathPartsString.head)
+		'/login'.assertEquals(endpoint.path)
 		assertTrue(endpoint.parameters.empty)
 		assertNull(endpoint.returnType)
 	}
@@ -79,7 +79,7 @@ class MicroLangParsingTest {
 		val endpoint = microservice.endpoints.head
 		
 		'GET'.assertEquals(endpoint.method)
-		'/'.assertEquals(endpoint.pathPartsString.head)
+		'/'.assertEquals(endpoint.path)
 		assertTrue(endpoint.parameters.empty)
 		assertNull(endpoint.returnType)
 	}
@@ -101,11 +101,11 @@ class MicroLangParsingTest {
 		val endpoints = microservice.endpoints
 		
 		'GET'.assertEquals(endpoints.get(0).method)
-		'/login'.assertEquals(endpoints.get(0).pathPartsString.head)
+		'/login'.assertEquals(endpoints.get(0).path)
 		'POST'.assertEquals(endpoints.get(1).method)
-		'/'.assertEquals(endpoints.get(1).pathPartsString.head)
+		'/'.assertEquals(endpoints.get(1).path)
 		'DELETE'.assertEquals(endpoints.get(2).method)
-		'/user'.assertEquals(endpoints.get(2).pathPartsString.head)
+		'/user'.assertEquals(endpoints.get(2).path)
 	}
 	
 	@Test
@@ -122,8 +122,8 @@ class MicroLangParsingTest {
 		2.assertEquals(endpoint.pathParts.size)
 		
 		'GET'.assertEquals(endpoint.method)
-		'/login'.assertEquals(endpoint.pathPartsString.head)
-		'/{userId}'.assertEquals(endpoint.pathPartsString.last)
+		'/login'.assertEquals(endpoint.pathParts.head.path)
+		'/{userId}'.assertEquals(endpoint.pathParts.last.path)
 	}
 	
 	@Test
@@ -276,8 +276,40 @@ class MicroLangParsingTest {
 		model.assertNoErrors
 		val microservices = model.microservices
 		val uses = microservices.last.uses
+		
 		2.assertEquals(uses.size)
 		microservices.get(0).assertSame(uses.get(0))
+		microservices.get(1).assertSame(uses.get(1))
+	}
+	
+	@Test
+	def testUsesOtherMicroserviceAndEndpointsAnyOrder() {
+		val model = '''
+			microservice TEST_SERVICE @ localhost:5000 {
+			}
+			microservice SECOND_SERVICE @ localhost:5001 {
+			}
+			microservice MOVIE_SERVICE @ localhost:5002 {
+				GET /login
+				uses TEST_SERVICE
+				POST /user {
+					return bool
+				}
+				uses SECOND_SERVICE
+			}
+		'''.parse
+		model.assertNoErrors
+		val microservices = model.microservices
+		val microservice = microservices.last
+		val uses = microservice.uses
+		
+		4.assertEquals(microservice.declarations.size)
+		2.assertEquals(microservice.endpoints.size)
+		2.assertEquals(microservice.uses.size)
+		
+		'/login'.assertEquals(microservice.endpoints.head.path)
+		microservices.get(0).assertSame(uses.get(0))
+		'/user'.assertEquals(microservice.endpoints.last.path)
 		microservices.get(1).assertSame(uses.get(1))
 	}
 	

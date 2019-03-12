@@ -28,7 +28,7 @@ class MicroLangValidationTest {
 				uses TEST_SERVICE
 			}
 		'''.parse
-		model.assertError(MicroLangPackage.eINSTANCE.microservice, MicroLangValidator.USES_SELF)
+		model.assertError(MicroLangPackage.eINSTANCE.uses, MicroLangValidator.USES_SELF)
 	}
 	
 	@Test
@@ -47,7 +47,7 @@ class MicroLangValidationTest {
 				GET /LOgiN
 			}
 		'''.parse
-		model.assertWarning(MicroLangPackage.eINSTANCE.endpoint, MicroLangValidator.INVALID_ENDPOINT_PATH_NAME)
+		model.assertWarning(MicroLangPackage.eINSTANCE.pathPart, MicroLangValidator.INVALID_ENDPOINT_PATH_NAME)
 	}
 	
 }

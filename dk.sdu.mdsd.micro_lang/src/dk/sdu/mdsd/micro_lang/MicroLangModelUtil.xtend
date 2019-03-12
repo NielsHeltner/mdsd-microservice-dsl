@@ -30,11 +30,7 @@ class MicroLangModelUtil {
 	}
 	
 	def path(Endpoint endpoint) {
-		endpoint.pathParts.join
-	}
-	
-	def pathPartsString(Endpoint endpoint) {
-		endpoint.pathParts.map[path]
+		endpoint.pathParts.map[path].join
 	}
 	
 	def normalPathParts(Endpoint endpoint) {

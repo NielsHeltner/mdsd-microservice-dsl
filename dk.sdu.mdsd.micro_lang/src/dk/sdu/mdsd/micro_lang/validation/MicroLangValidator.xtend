@@ -9,6 +9,8 @@ import dk.sdu.mdsd.micro_lang.microLang.Endpoint
 import dk.sdu.mdsd.micro_lang.microLang.MicroLangPackage
 import dk.sdu.mdsd.micro_lang.microLang.Microservice
 import org.eclipse.xtext.validation.Check
+import dk.sdu.mdsd.micro_lang.microLang.Uses
+import dk.sdu.mdsd.micro_lang.microLang.NormalPath
 
 /**
  * This class contains custom validation rules. 
@@ -31,16 +33,16 @@ class MicroLangValidator extends AbstractMicroLangValidator {
 	extension MicroLangModelUtil
 	
 	@Check
-	def checkNoSelfInUses(Microservice microservice) {
-		if (microservice.uses.empty) {
+	def checkNoSelfInUses(Uses uses) {
+		if (uses.target === null) {
 			return
 		}
-		if (microservice.uses.contains(microservice)) {
-			error('Microservice "' + microservice.name + '" references itself', 
-				MicroLangPackage.eINSTANCE.microservice_Declarations, 
-				microservice.uses.indexOf(microservice), 
+		val container = uses.eContainer as Microservice
+		if (uses.target === container) {
+			error('Microservice "' + container.name + '" references itself', 
+				MicroLangPackage.eINSTANCE.uses_Target, 
 				USES_SELF, 
-				microservice.name)
+				uses.target.name)
 		}
 	}
 	
@@ -55,17 +57,14 @@ class MicroLangValidator extends AbstractMicroLangValidator {
 	}
 	
 	@Check
-	def checkEndpointPathIsLowerCase(Endpoint endpoint) {
-		endpoint.normalPathParts.forEach[
-			val name = path
-			if (!name.equals(name.toLowerCase)) {
-				warning('Endpoint path should be written in lower case', 
-					MicroLangPackage.eINSTANCE.endpoint_PathParts, 
-					endpoint.pathParts.indexOf(it), 
+	def checkNormalPathIsLowerCase(NormalPath path) {
+		val name = path.path
+		if(!name.equals(name.toLowerCase)) {
+			warning('Endpoint path should be written in lower case', 
+					MicroLangPackage.eINSTANCE.pathPart_Path, 
 					INVALID_ENDPOINT_PATH_NAME, 
 					name)
-			}
-		]
+		}
 	}
 	
 	@Check
