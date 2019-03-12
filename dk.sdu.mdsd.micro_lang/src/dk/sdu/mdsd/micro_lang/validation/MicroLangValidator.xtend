@@ -33,7 +33,7 @@ class MicroLangValidator extends AbstractMicroLangValidator {
 	extension MicroLangModelUtil
 	
 	@Check
-	def checkNoSelfInUses(Uses uses) {
+	def checkSelfNotInUses(Uses uses) {
 		if (uses.target === null) {
 			return
 		}
