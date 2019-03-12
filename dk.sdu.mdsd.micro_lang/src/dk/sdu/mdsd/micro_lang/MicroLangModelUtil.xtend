@@ -4,11 +4,21 @@ import dk.sdu.mdsd.micro_lang.microLang.Endpoint
 import dk.sdu.mdsd.micro_lang.microLang.Parameter
 import dk.sdu.mdsd.micro_lang.microLang.Return
 import dk.sdu.mdsd.micro_lang.microLang.NormalPath
+import dk.sdu.mdsd.micro_lang.microLang.Uses
+import dk.sdu.mdsd.micro_lang.microLang.Microservice
 
 class MicroLangModelUtil {
 	
+	def uses(Microservice microservice) {
+		microservice.declarations.filter(Uses).map[target].toList
+	}
+	
+	def endpoints(Microservice microservice) {
+		microservice.declarations.filter(Endpoint).toList
+	}
+	
 	def parameters(Endpoint endpoint) {
-		endpoint.statements.filter(Parameter)
+		endpoint.statements.filter(Parameter).toList
 	}
 	
 	def returnType(Endpoint endpoint) {
@@ -24,7 +34,7 @@ class MicroLangModelUtil {
 	}
 	
 	def normalPathParts(Endpoint endpoint) {
-		endpoint.pathParts.filter(NormalPath)
+		endpoint.pathParts.filter(NormalPath).toList
 	}
 	
 }

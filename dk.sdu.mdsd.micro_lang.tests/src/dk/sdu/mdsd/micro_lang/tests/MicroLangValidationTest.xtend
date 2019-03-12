@@ -1,7 +1,6 @@
 package dk.sdu.mdsd.micro_lang.tests
 
 import com.google.inject.Inject
-import dk.sdu.mdsd.micro_lang.MicroLangModelUtil
 import dk.sdu.mdsd.micro_lang.microLang.MicroLangPackage
 import dk.sdu.mdsd.micro_lang.microLang.Model
 import dk.sdu.mdsd.micro_lang.validation.MicroLangValidator

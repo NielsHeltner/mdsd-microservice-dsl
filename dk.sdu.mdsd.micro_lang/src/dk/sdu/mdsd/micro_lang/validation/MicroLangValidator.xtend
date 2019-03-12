@@ -37,7 +37,7 @@ class MicroLangValidator extends AbstractMicroLangValidator {
 		}
 		if (microservice.uses.contains(microservice)) {
 			error('Microservice "' + microservice.name + '" references itself', 
-				MicroLangPackage.eINSTANCE.microservice_Uses, 
+				MicroLangPackage.eINSTANCE.microservice_Declarations, 
 				microservice.uses.indexOf(microservice), 
 				USES_SELF, 
 				microservice.name)

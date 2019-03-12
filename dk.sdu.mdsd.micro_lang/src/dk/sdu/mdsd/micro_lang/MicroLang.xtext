@@ -8,13 +8,20 @@ Model:
 	
 Microservice:
 	'microservice' name=ID location=Location '{'
-		('uses' uses+=[Microservice])*
-		endpoints+=Endpoint*
+		declarations+=Declaration*
 	'}'
 ;
 
 Location:
 	'@' location=ID ':' port=INT
+;
+
+Declaration:
+	Uses | Endpoint
+;
+
+Uses:
+	'uses' target=[Microservice]
 ;
 
 Endpoint:
