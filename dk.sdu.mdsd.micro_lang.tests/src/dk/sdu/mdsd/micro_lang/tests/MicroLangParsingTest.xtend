@@ -181,11 +181,43 @@ class MicroLangParsingTest {
 		val microservice = model.microservices.head
 		val endpoint = microservice.endpoints.head
 		
+		2.assertEquals(endpoint.statements.size)
 		1.assertEquals(endpoint.parameters.size)
 		
 		'int[]'.assertEquals(endpoint.parameters.head.type)
 		'numbers'.assertEquals(endpoint.parameters.head.name)
 		'double'.assertEquals(endpoint.returnType.type)
+	}
+	
+	@Test
+	def testEndpointParametersAndReturnTypeAnyOrder() {
+		val model = '''
+			microservice TEST_SERVICE @ localhost:5000 {
+				GET /average {
+					return int
+					
+					int[] numbers
+					
+					return double
+					
+					long number
+				}
+			}
+		'''.parse
+		model.assertNoErrors
+		val microservice = model.microservices.head
+		val endpoint = microservice.endpoints.head
+		
+		4.assertEquals(endpoint.statements.size)
+		2.assertEquals(endpoint.parameters.size)
+		2.assertEquals(endpoint.returnTypes.size)
+		
+		'int'.assertEquals(endpoint.returnTypes.head.type)
+		'int[]'.assertEquals(endpoint.parameters.head.type)
+		'numbers'.assertEquals(endpoint.parameters.head.name)
+		'double'.assertEquals(endpoint.returnTypes.last.type)
+		'long'.assertEquals(endpoint.parameters.last.type)
+		'number'.assertEquals(endpoint.parameters.last.name)
 	}
 	
 	@Test

@@ -21,8 +21,12 @@ class MicroLangModelUtil {
 		endpoint.statements.filter(Parameter).toList
 	}
 	
+	def returnTypes(Endpoint endpoint) {
+		endpoint.statements.filter(Return)
+	}
+	
 	def returnType(Endpoint endpoint) {
-		endpoint.statements.filter(Return).head
+		endpoint.returnTypes.head
 	}
 	
 	def path(Endpoint endpoint) {
