@@ -11,7 +11,7 @@ Element:
 ;
 
 Template:
-	'template' name=ID ('(' parameters+=Parameter (',' parameters+=Parameter)* ')')?
+	'template' name=ID ('(' parameters+=ID (',' parameters+=ID)* ')')?
 		declarations+=Declaration*
 ;
 	
@@ -37,7 +37,7 @@ Implements:
 ;
 
 Endpoint:
-	pathParts+=PathPart+ operations+=Operation*
+	pathParts+=PathPart+ operations+=Operation+
 ;
 
 PathPart:
@@ -57,7 +57,7 @@ NormalPathText:
 ;
 
 ParameterPathText:
-	'/' '{' ID '}'
+	'/' '{' Parameter '}'
 ;
 
 Operation:
@@ -81,7 +81,8 @@ Require:
 ;
 
 Logic:
-	
+	'l'
+	//boolean logic omitted for brevity
 ;
 
 Return:
