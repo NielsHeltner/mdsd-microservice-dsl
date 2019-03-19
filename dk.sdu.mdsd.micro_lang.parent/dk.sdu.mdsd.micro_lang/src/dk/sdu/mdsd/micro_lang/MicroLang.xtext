@@ -3,13 +3,21 @@ grammar dk.sdu.mdsd.micro_lang.MicroLang with org.eclipse.xtext.common.Terminals
 generate microLang "http://www.sdu.dk/mdsd/micro_lang/MicroLang"
 
 Model:
-	microservices+=Microservice*
+	elements+=Element*
+;
+
+Element:
+	Template | Microservice
+;
+
+Template:
+	'template' name=ID ('(' parameters+=Parameter (',' parameters+=Parameter)* ')')?
+		declarations+=Declaration*
 ;
 	
 Microservice:
-	'microservice' name=ID location=Location '{'
+	'microservice' name=ID location=Location
 		declarations+=Declaration*
-	'}'
 ;
 
 Location:
@@ -17,21 +25,19 @@ Location:
 ;
 
 Declaration:
-	Uses | Endpoint
+	Uses | Implements | Endpoint
 ;
 
 Uses:
 	'uses' target=[Microservice]
 ;
 
-Endpoint:
-	method=Method pathParts+=PathPart+ ('{'
-		statements+=Statement*
-	'}')?
+Implements:
+	'implements' target=[Template] ('(' arguments+=ID (',' arguments+=ID)* ')')?
 ;
 
-Method:
-	'GET' | 'POST' | 'PUT' | 'DELETE' | 'OPTIONS'
+Endpoint:
+	pathParts+=PathPart+ operations+=Operation*
 ;
 
 PathPart:
@@ -54,12 +60,28 @@ ParameterPathText:
 	'/' '{' ID '}'
 ;
 
+Operation:
+	method=Method statements+=Statement*
+;
+
+Method:
+	'GET' | 'POST' | 'PUT' | 'DELETE' | 'OPTIONS'
+;
+
 Statement:
-	Parameter | Return
+	Parameter | Require | Return
 ;
 
 Parameter:
 	type=Type name=ID
+;
+
+Require:
+	'require' logic=Logic
+;
+
+Logic:
+	
 ;
 
 Return:
@@ -67,5 +89,5 @@ Return:
 ;
 
 Type:
-	('bool' | 'char' | 'string' | 'int' | 'long' | 'float' | 'double') ('['']')?
+	('bool' | 'char' | 'string' | 'int' | 'long' | 'float' | 'double') ('['']')*
 ;
