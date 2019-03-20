@@ -11,7 +11,7 @@ Element:
 ;
 
 Template:
-	'template' name=ID ('(' parameters+=ID (',' parameters+=ID)* ')')?
+	'template' name=ID ('(' parameters+=Parameter (',' parameters+=Parameter)* ')')?
 		declarations+=Declaration*
 ;
 	
@@ -57,7 +57,7 @@ NormalPathText:
 ;
 
 ParameterPathText:
-	'/' '{' Parameter '}'
+	'/' '{' TypedParameter '}'
 ;
 
 Operation:
@@ -69,11 +69,15 @@ Method:
 ;
 
 Statement:
-	Parameter | Require | Return
+	TypedParameter | Require | Return
 ;
 
 Parameter:
-	type=Type name=ID
+	name=ID
+;
+
+TypedParameter:
+	type=Type parameter=Parameter
 ;
 
 Require:
