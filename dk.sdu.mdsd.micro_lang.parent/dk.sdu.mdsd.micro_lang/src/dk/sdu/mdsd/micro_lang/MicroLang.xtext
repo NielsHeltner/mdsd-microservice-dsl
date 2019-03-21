@@ -45,19 +45,11 @@ PathPart:
 ;
 
 NormalPath:
-	path = NormalPathText
+	'/' name=ID
 ;
 
 ParameterPath:
-	path = ParameterPathText
-;
-
-NormalPathText:
-	'/' (ID)?
-;
-
-ParameterPathText:
-	'/' '{' TypedParameter '}'
+	'/' '{' parameter=TypedParameter '}'
 ;
 
 Operation:
@@ -65,7 +57,7 @@ Operation:
 ;
 
 Method:
-	'GET' | 'POST' | 'PUT' | 'DELETE' | 'OPTIONS'
+	({TemplatedMethod} '{' name=ID '}') | name=('GET' | 'POST' | 'PUT' | 'DELETE' | 'OPTIONS')
 ;
 
 Statement:
@@ -73,7 +65,7 @@ Statement:
 ;
 
 Parameter:
-	name=ID
+	({TemplatedParameter} '{' name=ID '}') | name=ID 
 ;
 
 TypedParameter:
@@ -94,5 +86,5 @@ Return:
 ;
 
 Type:
-	('bool' | 'char' | 'string' | 'int' | 'long' | 'float' | 'double') ('['']')*
+	({TemplatedType} '{' name=ID '}') | name=('bool' | 'char' | 'string' | 'int' | 'long' | 'float' | 'double') ('['']')*
 ;
