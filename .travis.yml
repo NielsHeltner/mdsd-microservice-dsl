@@ -14,4 +14,4 @@ before_install:
 install: true
 before_script: cd dk.sdu.mdsd.micro_lang.parent
 script:
-  - mvn -X clean install
+  - mvn -e clean install
