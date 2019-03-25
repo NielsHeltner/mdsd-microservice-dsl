@@ -15,3 +15,5 @@ install: true
 before_script: cd dk.sdu.mdsd.micro_lang.parent
 script:
   - mvn -e clean install
+after_failure:
+  - cat dk.sdu.mdsd.micro_lang.ui.tests/target/work/data/.metadata/.log
