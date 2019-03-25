@@ -57,7 +57,7 @@ Operation:
 ;
 
 Method:
-	({TemplatedMethod} '{' name=ID '}') | name=('GET' | 'POST' | 'PUT' | 'DELETE' | 'OPTIONS')
+	name=('GET' | 'POST' | 'PUT' | 'DELETE' | 'OPTIONS') | '{' target=[Parameter] '}'
 ;
 
 Statement:
@@ -65,11 +65,11 @@ Statement:
 ;
 
 Parameter:
-	({TemplatedParameter} '{' name=ID '}') | name=ID 
+	name=ID
 ;
 
 TypedParameter:
-	type=Type parameter=Parameter
+	type=Type (name=ID | '{' target=[Parameter] '}')
 ;
 
 Require:
@@ -86,5 +86,5 @@ Return:
 ;
 
 Type:
-	({TemplatedType} '{' name=ID '}') | name=('bool' | 'char' | 'string' | 'int' | 'long' | 'float' | 'double') ('['']')*
+	name=('bool' | 'char' | 'string' | 'int' | 'long' | 'float' | 'double') ('['']')* | '{' target=[Parameter] '}'
 ;
