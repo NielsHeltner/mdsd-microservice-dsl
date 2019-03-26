@@ -4,6 +4,7 @@ jdk:
 matrix:
   include:
     - os: linux
+      env: DISPLAY=:99.0
     - os: osx
       osx_image: xcode9.3
 cache:
@@ -12,6 +13,10 @@ cache:
 before_install:
   - echo "MAVEN_OPTS='-Xmx1024m'" > ~/.mavenrc
 install: true
-before_script: cd dk.sdu.mdsd.micro_lang.parent
+before_script:
+  - sh -e ./unix_display_server.sh
+  - cd dk.sdu.mdsd.micro_lang.parent
 script:
-  - mvn clean install
+  - mvn -e clean install
+after_failure:
+  - cat dk.sdu.mdsd.micro_lang.ui.tests/target/work/data/.metadata/.log
