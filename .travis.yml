@@ -4,14 +4,13 @@ jdk:
 matrix:
   include:
     - os: linux
-      env: DISPLAY=:1
+      services:
+        - xvfb
     - os: osx
       osx_image: xcode9.3
 cache:
   directories:
     - $HOME/.m2
-services:
-  - xvfb
 before_install:
   - echo "MAVEN_OPTS='-Xmx1024m'" > ~/.mavenrc
 install: true
