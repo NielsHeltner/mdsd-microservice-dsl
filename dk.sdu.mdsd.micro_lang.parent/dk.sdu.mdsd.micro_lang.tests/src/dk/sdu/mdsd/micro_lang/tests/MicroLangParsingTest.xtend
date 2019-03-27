@@ -42,7 +42,7 @@ class MicroLangParsingTest {
 		val microservice = model.microservices.head
 		
 		'TEST_SERVICE'.assertEquals(microservice.name)
-		'localhost'.assertEquals(microservice.location.location)
+		'localhost'.assertEquals(microservice.location.host)
 		5000.assertEquals(microservice.location.port)
 		assertTrue(microservice.endpoints.empty)
 	}
