@@ -6,18 +6,25 @@ Model:
 	elements+=Element*
 ;
 
+terminal BEGIN: 'synthetic:BEGIN';
+terminal END: 'synthetic:END';
+
 Element:
 	Template | Microservice
 ;
 
 Template:
 	'template' name=ID ('(' parameters+=Parameter (',' parameters+=Parameter)* ')')?
+	(BEGIN
 		declarations+=Declaration*
+	END)*
 ;
-	
+
 Microservice:
 	'microservice' name=ID location=Location
+	(BEGIN
 		declarations+=Declaration*
+	END)*
 ;
 
 Location:
@@ -37,7 +44,10 @@ Implements:
 ;
 
 Endpoint:
-	pathParts+=PathPart+ operations+=Operation+
+	pathParts+=PathPart+
+	BEGIN
+		operations+=Operation+
+	END
 ;
 
 PathPart:
@@ -53,7 +63,10 @@ ParameterPath:
 ;
 
 Operation:
-	method=Method statements+=Statement*
+	method=Method
+	(BEGIN
+		statements+=Statement*
+	END)*
 ;
 
 Method:
