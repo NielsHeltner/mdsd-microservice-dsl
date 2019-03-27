@@ -6,8 +6,21 @@ import dk.sdu.mdsd.micro_lang.microLang.Return
 import dk.sdu.mdsd.micro_lang.microLang.NormalPath
 import dk.sdu.mdsd.micro_lang.microLang.Uses
 import dk.sdu.mdsd.micro_lang.microLang.Microservice
+import dk.sdu.mdsd.micro_lang.microLang.Model
+import dk.sdu.mdsd.micro_lang.microLang.Template
 
+/**
+ * Extension utility methods for the various classes of the meta model.
+ */
 class MicroLangModelUtil {
+	
+	def microservices(Model model) {
+		model.elements.filter(Microservice)
+	}
+	
+	def templates(Model model) {
+		model.elements.filter(Template)
+	}
 	
 	def uses(Microservice microservice) {
 		microservice.declarations.filter(Uses).map[target].toList

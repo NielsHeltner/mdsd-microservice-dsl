@@ -50,7 +50,7 @@ class MicroLangValidator extends AbstractMicroLangValidator {
 	def checkMicroserviceNameIsUpperCase(Microservice microservice) {
 		if (!microservice.name.equals(microservice.name.toUpperCase)) {
 			warning('Microservice name should be written in upper case', 
-				MicroLangPackage.eINSTANCE.microservice_Name, 
+				MicroLangPackage.eINSTANCE.element_Name, 
 				INVALID_MICROSERVICE_NAME, 
 				microservice.name)
 		}
