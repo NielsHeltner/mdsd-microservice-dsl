@@ -8,6 +8,9 @@ import dk.sdu.mdsd.micro_lang.microLang.Uses
 import dk.sdu.mdsd.micro_lang.microLang.Microservice
 import dk.sdu.mdsd.micro_lang.microLang.Model
 import dk.sdu.mdsd.micro_lang.microLang.Template
+import dk.sdu.mdsd.micro_lang.microLang.Operation
+import dk.sdu.mdsd.micro_lang.microLang.ParameterPath
+import dk.sdu.mdsd.micro_lang.microLang.TypedParameter
 
 /**
  * Extension utility methods for the various classes of the meta model.
@@ -30,24 +33,34 @@ class MicroLangModelUtil {
 		microservice.declarations.filter(Endpoint).toList
 	}
 	
-	def parameters(Endpoint endpoint) {
-		endpoint.statements.filter(Parameter).toList
+	def parameters(Operation operation) {
+		operation.statements.filter(Parameter).toList
 	}
 	
-	def returnTypes(Endpoint endpoint) {
-		endpoint.statements.filter(Return)
+	def returnTypes(Operation operation) {
+		operation.statements.filter(Return)
 	}
 	
-	def returnType(Endpoint endpoint) {
-		endpoint.returnTypes.head
+	def returnType(Operation operation) {
+		operation.returnTypes.head
 	}
 	
 	def path(Endpoint endpoint) {
-		endpoint.pathParts.map[path].join
+		endpoint.pathParts.map[
+			switch it {
+				NormalPath: name
+				ParameterPath: parameter.asString
+			}
+				
+		].join('/')
 	}
 	
-	def normalPathParts(Endpoint endpoint) {
+	def normalPathParts(Endpoint endpoint, TypedParameter p) {
 		endpoint.pathParts.filter(NormalPath).toList
+	}
+	
+	def asString(TypedParameter typedParameter) {
+		typedParameter.type.name + ' ' + typedParameter.name
 	}
 	
 }
