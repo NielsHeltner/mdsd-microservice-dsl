@@ -7,7 +7,6 @@ import org.eclipse.emf.ecore.resource.Resource
 import org.eclipse.xtext.generator.AbstractGenerator
 import org.eclipse.xtext.generator.IFileSystemAccess2
 import org.eclipse.xtext.generator.IGeneratorContext
-import dk.sdu.mdsd.micro_lang.microLang.Endpoint
 
 /**
  * Generates code from your model files on save.
@@ -15,12 +14,24 @@ import dk.sdu.mdsd.micro_lang.microLang.Endpoint
  * See https://www.eclipse.org/Xtext/documentation/303_runtime_concepts.html#code-generation
  */
 class MicroLangGenerator extends AbstractGenerator {
+	
+	public static val LIB = 'src/resources/generator/lib.txt'
 
 	override void doGenerate(Resource resource, IFileSystemAccess2 fsa, IGeneratorContext context) {
+		fsa.generateFileFromResource(LIB)
+		
 //		fsa.generateFile('greetings.txt', 'People to greet: ' + 
 //			resource.allContents
 //				.filter(Greeting)
 //				.map[name]
 //				.join(', '))
+	}
+	
+	def private generateFileFromResource(IFileSystemAccess2 fsa, String resourceName) {
+		val urlInputStream = class.classLoader.getResourceAsStream(LIB)
+		
+		val nameIndex = resourceName.lastIndexOf('/') + 1
+		val fileName = resourceName.substring(nameIndex)
+		fsa.generateFile(fileName, urlInputStream)
 	}
 }
