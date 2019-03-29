@@ -11,6 +11,7 @@ import dk.sdu.mdsd.micro_lang.microLang.Template
 import dk.sdu.mdsd.micro_lang.microLang.Operation
 import dk.sdu.mdsd.micro_lang.microLang.ParameterPath
 import dk.sdu.mdsd.micro_lang.microLang.TypedParameter
+import dk.sdu.mdsd.micro_lang.microLang.Implements
 
 /**
  * Extension utility methods for the various classes of the meta model.
@@ -29,12 +30,16 @@ class MicroLangModelUtil {
 		microservice.declarations.filter(Uses).map[target].toList
 	}
 	
+	def getImplements(Microservice microservice) {
+		microservice.declarations.filter(Implements).map[target].toList
+	}
+	
 	def endpoints(Microservice microservice) {
 		microservice.declarations.filter(Endpoint).toList
 	}
 	
 	def parameters(Operation operation) {
-		operation.statements.filter(Parameter).toList
+		operation.statements.filter(TypedParameter).toList
 	}
 	
 	def returnTypes(Operation operation) {
