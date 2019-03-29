@@ -65,7 +65,7 @@ class MicroLangModelUtil {
 	}
 	
 	def asString(TypedParameter typedParameter) {
-		typedParameter.type.name + ' ' + typedParameter.name
+		typedParameter.type.name + typedParameter.type.arrays.join + ' ' + typedParameter.name
 	}
 	
 }
