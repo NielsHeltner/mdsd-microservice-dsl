@@ -3,23 +3,26 @@
  */
 package dk.sdu.mdsd.micro_lang.generator
 
+import com.google.common.base.CaseFormat
+import com.google.inject.Inject
+import dk.sdu.mdsd.micro_lang.MicroLangModelUtil
+import dk.sdu.mdsd.micro_lang.microLang.Element
+import dk.sdu.mdsd.micro_lang.microLang.Endpoint
+import dk.sdu.mdsd.micro_lang.microLang.Implements
+import dk.sdu.mdsd.micro_lang.microLang.Microservice
+import dk.sdu.mdsd.micro_lang.microLang.Operation
+import dk.sdu.mdsd.micro_lang.microLang.Return
+import dk.sdu.mdsd.micro_lang.microLang.Template
+import dk.sdu.mdsd.micro_lang.microLang.TypedParameter
+import dk.sdu.mdsd.micro_lang.microLang.Uses
+import java.io.File
+import java.io.FileInputStream
+import java.util.List
+import org.eclipse.core.runtime.FileLocator
 import org.eclipse.emf.ecore.resource.Resource
 import org.eclipse.xtext.generator.AbstractGenerator
 import org.eclipse.xtext.generator.IFileSystemAccess2
 import org.eclipse.xtext.generator.IGeneratorContext
-import dk.sdu.mdsd.micro_lang.microLang.Element
-import dk.sdu.mdsd.micro_lang.microLang.Template
-import dk.sdu.mdsd.micro_lang.microLang.Microservice
-import com.google.common.base.CaseFormat
-import dk.sdu.mdsd.micro_lang.microLang.Uses
-import dk.sdu.mdsd.micro_lang.microLang.Implements
-import dk.sdu.mdsd.micro_lang.microLang.Endpoint
-import com.google.inject.Inject
-import dk.sdu.mdsd.micro_lang.MicroLangModelUtil
-import dk.sdu.mdsd.micro_lang.microLang.TypedParameter
-import java.util.List
-import dk.sdu.mdsd.micro_lang.microLang.Operation
-import dk.sdu.mdsd.micro_lang.microLang.Return
 
 /**
  * Generates code from your model files on save.
@@ -39,12 +42,12 @@ class MicroLangGenerator extends AbstractGenerator {
 	public static val GEN_TEMPLATES_IMPL_DIR = GEN_TEMPLATES_INTERFACE_DIR + "impl/"
 	public static val GEN_MICROSERVICES_IMPL_DIR = GEN_MICROSERVICES_INTERFACE_DIR + "microservices/"
 	
-	public static val RES_LIB = 'src/resources/generator/lib.txt'
+	public static val RES_LIB_DIR = 'src/resources/generator/'
 
 	override void doGenerate(Resource resource, IFileSystemAccess2 fsa, IGeneratorContext context) {
 		resource.allContents.filter(Element).forEach[generateElement(fsa)]
 		
-		fsa.generateFileFromResource(RES_LIB)
+		fsa.generateFilesFromDir(RES_LIB_DIR)
 	}
 	
 	def dispatch generateElement(Template template, IFileSystemAccess2 fsa) {
@@ -126,12 +129,26 @@ class MicroLangGenerator extends AbstractGenerator {
 		operationName + pathName
 	}
 	
-	def generateFileFromResource(IFileSystemAccess2 fsa, String resource) {
-		val urlInputStream = class.classLoader.getResourceAsStream(resource)
-		
-		val nameIndex = resource.lastIndexOf('/') + 1
-		val fileName = resource.substring(nameIndex)
-		fsa.generateFile(fileName, urlInputStream)
+	/**
+	 * Recursively copies every file in the directory.
+	 */
+	def void generateFilesFromDir(IFileSystemAccess2 fsa, String dirName) {
+		val dirPath = FileLocator.resolve(class.classLoader.getResource(dirName)).path
+		val relativePathStartIndex = dirPath.indexOf(RES_LIB_DIR)
+		val genDirStartIndex = relativePathStartIndex + RES_LIB_DIR.length
+		val dir = new File(dirPath)
+		for (resource : dir.listFiles) {
+			val path = resource.toURI.path
+			switch resource {
+				case resource.isFile: fsa.generateFileFromResource(path, path.substring(genDirStartIndex))
+				case resource.isDirectory: fsa.generateFilesFromDir(resource.toURI.path.substring(relativePathStartIndex))
+			}
+		}
+	}
+	
+	def generateFileFromResource(IFileSystemAccess2 fsa, String resource, String fileName) {
+		val inputStream = new FileInputStream(resource)
+		fsa.generateFile(fileName, inputStream)
 	}
 	
 	def generateHeader()'''
