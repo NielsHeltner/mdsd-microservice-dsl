@@ -1,17 +1,17 @@
 package dk.sdu.mdsd.micro_lang
 
 import dk.sdu.mdsd.micro_lang.microLang.Endpoint
-import dk.sdu.mdsd.micro_lang.microLang.Parameter
-import dk.sdu.mdsd.micro_lang.microLang.Return
-import dk.sdu.mdsd.micro_lang.microLang.NormalPath
-import dk.sdu.mdsd.micro_lang.microLang.Uses
+import dk.sdu.mdsd.micro_lang.microLang.Implements
 import dk.sdu.mdsd.micro_lang.microLang.Microservice
 import dk.sdu.mdsd.micro_lang.microLang.Model
-import dk.sdu.mdsd.micro_lang.microLang.Template
+import dk.sdu.mdsd.micro_lang.microLang.NormalPath
 import dk.sdu.mdsd.micro_lang.microLang.Operation
 import dk.sdu.mdsd.micro_lang.microLang.ParameterPath
+import dk.sdu.mdsd.micro_lang.microLang.Return
+import dk.sdu.mdsd.micro_lang.microLang.Template
+import dk.sdu.mdsd.micro_lang.microLang.Type
 import dk.sdu.mdsd.micro_lang.microLang.TypedParameter
-import dk.sdu.mdsd.micro_lang.microLang.Implements
+import dk.sdu.mdsd.micro_lang.microLang.Uses
 
 /**
  * Extension utility methods for the various classes of the meta model.
@@ -60,12 +60,16 @@ class MicroLangModelUtil {
 		].join('/')
 	}
 	
-	def normalPathParts(Endpoint endpoint, TypedParameter p) {
+	def normalPathParts(Endpoint endpoint) {
 		endpoint.pathParts.filter(NormalPath).toList
 	}
 	
 	def asString(TypedParameter typedParameter) {
-		typedParameter.type.name + typedParameter.type.arrays.join + ' ' + typedParameter.name
+		typedParameter.type.asString + ' ' + typedParameter.name
+	}
+	
+	def asString(Type type) {
+		type.name + type.arrays.join
 	}
 	
 }

@@ -6,6 +6,8 @@ package dk.sdu.mdsd.micro_lang.tests
 import com.google.inject.Inject
 import dk.sdu.mdsd.micro_lang.MicroLangModelUtil
 import dk.sdu.mdsd.micro_lang.microLang.Model
+import dk.sdu.mdsd.micro_lang.microLang.NormalPath
+import dk.sdu.mdsd.micro_lang.microLang.ParameterPath
 import org.eclipse.xtext.testing.InjectWith
 import org.eclipse.xtext.testing.extensions.InjectionExtension
 import org.eclipse.xtext.testing.util.ParseHelper
@@ -18,9 +20,6 @@ import static org.junit.Assert.assertTrue
 
 import static extension org.junit.Assert.assertEquals
 import static extension org.junit.Assert.assertSame
-import dk.sdu.mdsd.micro_lang.microLang.Microservice
-import dk.sdu.mdsd.micro_lang.microLang.NormalPath
-import dk.sdu.mdsd.micro_lang.microLang.ParameterPath
 
 @ExtendWith(InjectionExtension)
 @InjectWith(MicroLangInjectorProvider)
@@ -34,6 +33,8 @@ class MicroLangParsingTest {
 	
 	@Inject
 	extension MicroLangModelUtil
+	
+	//TODO: add tests for template
 	
 	@Test
 	def testMicroserviceNoEndpoints() {
@@ -137,135 +138,133 @@ class MicroLangParsingTest {
 		
 		val parameterInPath = (endpoint.pathParts.last as ParameterPath).parameter
 		
-		'int'.assertEquals(parameterInPath.type.name)
+		'int'.assertEquals(parameterInPath.type.asString)
 		'userId'.assertEquals(parameterInPath.name)
 		
 		'GET'.assertEquals(endpoint.operations.head.method.name)
 	}
 	
-	 
+	@Test
 	def testEndpointParametersNoReturn() {
 		val model = '''
-			microservice TEST_SERVICE @ localhost:5000 {
-				GET /login {
-					string username
-					char[] password
-				}
-			}
+			microservice TEST_SERVICE @ localhost:5000
+				/login
+					GET
+						string username
+						char[] password
 		'''.parse
 		model.assertNoErrors
 		val microservice = model.microservices.head
-		val endpoint = microservice.endpoints.head
+		val operation = microservice.endpoints.head.operations.head
 		
-		2.assertEquals(endpoint.parameters.size)
+		2.assertEquals(operation.parameters.size)
 		
-		'string'.assertEquals(endpoint.parameters.head.type)
-		'username'.assertEquals(endpoint.parameters.head.name)
-		'char[]'.assertEquals(endpoint.parameters.last.type)
-		'password'.assertEquals(endpoint.parameters.last.name)
-		assertNull(endpoint.returnType)
+		'string'.assertEquals(operation.parameters.head.type.asString)
+		'username'.assertEquals(operation.parameters.head.name)
+		'char[]'.assertEquals(operation.parameters.last.type.asString)
+		'password'.assertEquals(operation.parameters.last.name)
+		assertNull(operation.returnType)
 	}
 	
-	 
+	@Test
 	def testEndpointReturnTypeNoParameters() {
 		val model = '''
-			microservice TEST_SERVICE @ localhost:5000 {
-				GET /login {
-					return bool
-				}
-			}
+			microservice TEST_SERVICE @ localhost:5000
+				/login
+					GET
+						return bool
 		'''.parse
 		model.assertNoErrors
 		val microservice = model.microservices.head
-		val endpoint = microservice.endpoints.head
+		val operation = microservice.endpoints.head.operations.head
 		
-		assertTrue(endpoint.parameters.empty)
-		'bool'.assertEquals(endpoint.returnType.type)
+		assertTrue(operation.parameters.empty)
+		'bool'.assertEquals(operation.returnType.type.asString)
 	}
 	
-	 
+	@Test
 	def testEndpointParametersAndReturnType() {
 		val model = '''
-			microservice TEST_SERVICE @ localhost:5000 {
-				GET /average {
-					int[] numbers
-					
-					return double
-				}
-			}
+			microservice TEST_SERVICE @ localhost:5000
+				/average
+					GET
+						int[] numbers
+						
+						return double
 		'''.parse
 		model.assertNoErrors
 		val microservice = model.microservices.head
-		val endpoint = microservice.endpoints.head
+		val operation = microservice.endpoints.head.operations.head
 		
-		2.assertEquals(endpoint.statements.size)
-		1.assertEquals(endpoint.parameters.size)
+		2.assertEquals(operation.statements.size)
+		1.assertEquals(operation.parameters.size)
+		1.assertEquals(operation.returnTypes.size)
 		
-		'int[]'.assertEquals(endpoint.parameters.head.type)
-		'numbers'.assertEquals(endpoint.parameters.head.name)
-		'double'.assertEquals(endpoint.returnType.type)
+		'int[]'.assertEquals(operation.parameters.head.type.asString)
+		'numbers'.assertEquals(operation.parameters.head.name)
+		'double'.assertEquals(operation.returnType.type.asString)
 	}
 	
-	 
+	@Test
 	def testEndpointParametersAndReturnTypeAnyOrder() {
 		val model = '''
-			microservice TEST_SERVICE @ localhost:5000 {
-				GET /average {
-					return int
-					
-					int[] numbers
-					
-					return double
-					
-					long number
-				}
-			}
+			microservice TEST_SERVICE @ localhost:5000
+				/average
+					GET
+						return int
+						
+						int[] numbers
+						
+						return double
+						
+						long number
 		'''.parse
 		model.assertNoErrors
 		val microservice = model.microservices.head
-		val endpoint = microservice.endpoints.head
+		val operation = microservice.endpoints.head.operations.head
 		
-		4.assertEquals(endpoint.statements.size)
-		2.assertEquals(endpoint.parameters.size)
-		2.assertEquals(endpoint.returnTypes.size)
+		4.assertEquals(operation.statements.size)
+		2.assertEquals(operation.parameters.size)
+		2.assertEquals(operation.returnTypes.size)
 		
-		'int'.assertEquals(endpoint.returnTypes.head.type)
-		'int[]'.assertEquals(endpoint.parameters.head.type)
-		'numbers'.assertEquals(endpoint.parameters.head.name)
-		'double'.assertEquals(endpoint.returnTypes.last.type)
-		'long'.assertEquals(endpoint.parameters.last.type)
-		'number'.assertEquals(endpoint.parameters.last.name)
+		'int'.assertEquals(operation.returnTypes.head.type.asString)
+		'int[]'.assertEquals(operation.parameters.head.type.asString)
+		'numbers'.assertEquals(operation.parameters.head.name)
+		'double'.assertEquals(operation.returnTypes.last.type.asString)
+		'long'.assertEquals(operation.parameters.last.type.asString)
+		'number'.assertEquals(operation.parameters.last.name)
 	}
 	
-	 
+	@Test
 	def testMultipleMicroservicesMultipleEndpoints() {
 		val model = '''
-			microservice TEST_SERVICE @ localhost:5000 {
-				GET /average {
-					int[] numbers
-					
-					return double
-				}
-				POST /{id}/data {
-					string id
-				}
-			}
-			microservice SECOND_SERVICE @ localhost:5001 {
-				GET /login
-				POST / {
-					return bool
-				}
-				DELETE /user
-			}
-			microservice MOVIE_SERVICE @ localhost:5002 {
-				PUT /movies {
-					string name
-					string description
-				}
-				DELETE /movies/{id} {
-					return bool
-				}
-			}
+			microservice TEST_SERVICE @ localhost:5000
+				/average
+					GET
+						int[] numbers
+						
+						return double
+				/{int id}/data
+					POST
+						string password
+			
+			microservice SECOND_SERVICE @ localhost:5001
+				/login
+					GET
+				/user
+					POST
+						return bool
+				/user
+					DELETE
+			
+			microservice MOVIE_SERVICE @ localhost:5002
+				/movies
+					PUT
+						string name
+						string description
+				/movies/{int id}
+					DELETE
+						return bool
 		'''.parse
 		model.assertNoErrors
 		3.assertEquals(model.microservices.size)
@@ -278,17 +277,16 @@ class MicroLangParsingTest {
 		2.assertEquals(thirdMicroservice.endpoints.size)
 	}
 	
-	 
+	@Test
 	def testUsesOtherMicroservice() {
 		val model = '''
-			microservice TEST_SERVICE @ localhost:5000 {
-			}
-			microservice SECOND_SERVICE @ localhost:5001 {
-			}
-			microservice MOVIE_SERVICE @ localhost:5002 {
+			microservice TEST_SERVICE @ localhost:5000
+			
+			microservice SECOND_SERVICE @ localhost:5001
+			
+			microservice MOVIE_SERVICE @ localhost:5002
 				uses TEST_SERVICE
 				uses SECOND_SERVICE
-			}
 		'''.parse
 		model.assertNoErrors
 		val microservices = model.microservices
@@ -299,21 +297,21 @@ class MicroLangParsingTest {
 		microservices.get(1).assertSame(uses.get(1))
 	}
 	
-	 
+	@Test
 	def testUsesOtherMicroserviceAndEndpointsAnyOrder() {
 		val model = '''
-			microservice TEST_SERVICE @ localhost:5000 {
-			}
-			microservice SECOND_SERVICE @ localhost:5001 {
-			}
-			microservice MOVIE_SERVICE @ localhost:5002 {
-				GET /login
+			microservice TEST_SERVICE @ localhost:5000
+			
+			microservice SECOND_SERVICE @ localhost:5001
+			
+			microservice MOVIE_SERVICE @ localhost:5002
+				/login/test
+					GET
 				uses TEST_SERVICE
-				POST /user {
-					return bool
-				}
+				/user/test
+					POST
+						return bool
 				uses SECOND_SERVICE
-			}
 		'''.parse
 		model.assertNoErrors
 		val microservices = model.microservices
@@ -324,9 +322,9 @@ class MicroLangParsingTest {
 		2.assertEquals(microservice.endpoints.size)
 		2.assertEquals(microservice.uses.size)
 		
-		'/login'.assertEquals(microservice.endpoints.head.path)
+		'login/test'.assertEquals(microservice.endpoints.head.path)
 		microservices.get(0).assertSame(uses.get(0))
-		'/user'.assertEquals(microservice.endpoints.last.path)
+		'user/test'.assertEquals(microservice.endpoints.last.path)
 		microservices.get(1).assertSame(uses.get(1))
 	}
 	

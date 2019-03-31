@@ -24,9 +24,8 @@ class MicroLangValidationTest {
 	@Test
 	def testMicroserviceUsesItself() {
 		val model = '''
-			microservice TEST_SERVICE @ localhost:5000 {
+			microservice TEST_SERVICE @ localhost:5000
 				uses TEST_SERVICE
-			}
 		'''.parse
 		model.assertError(MicroLangPackage.eINSTANCE.uses, MicroLangValidator.USES_SELF)
 	}
@@ -34,8 +33,7 @@ class MicroLangValidationTest {
 	@Test
 	def testMicroserviceNameLowerCase() {
 		val model = '''
-			microservice testService @ localhost:5000 {
-			}
+			microservice testService @ localhost:5000
 		'''.parse
 		model.assertWarning(MicroLangPackage.eINSTANCE.microservice, MicroLangValidator.INVALID_MICROSERVICE_NAME)
 	}
@@ -43,9 +41,9 @@ class MicroLangValidationTest {
 	@Test
 	def testEndpointPathUpperCase() {
 		val model = '''
-			microservice TEST_SERVICE @ localhost:5000 {
-				GET /LOgiN
-			}
+			microservice TEST_SERVICE @ localhost:5000
+				/LOgiN
+					GET
 		'''.parse
 		model.assertWarning(MicroLangPackage.eINSTANCE.pathPart, MicroLangValidator.INVALID_ENDPOINT_PATH_NAME)
 	}
