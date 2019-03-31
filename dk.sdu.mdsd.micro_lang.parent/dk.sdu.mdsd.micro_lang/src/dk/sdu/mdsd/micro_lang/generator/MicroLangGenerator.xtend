@@ -31,6 +31,8 @@ class MicroLangGenerator extends AbstractGenerator {
 	@Inject
 	extension MicroLangModelUtil
 	
+	public static val GEN_FILE_EXT = ".java"
+	
 	public static val GEN_TEMPLATES_INTERFACE_DIR = "templates/"
 	public static val GEN_MICROSERVICES_INTERFACE_DIR = "microservices/"
 	
@@ -43,26 +45,24 @@ class MicroLangGenerator extends AbstractGenerator {
 		resource.allContents.filter(Element).forEach[generateElement(fsa)]
 		
 		fsa.generateFileFromResource(RES_LIB)
-		
-//		fsa.generateFile('greetings.txt', 'People to greet: ' + 
-//			resource.allContents
-//				.filter(Greeting)
-//				.map[name]
-//				.join(', '))
 	}
 	
 	def dispatch generateElement(Template template, IFileSystemAccess2 fsa) {
-		val interfaceDir = GEN_TEMPLATES_INTERFACE_DIR
-		val interfacePackage = interfaceDir.replaceAll("/", ".").substring(0, interfaceDir.length - 1)
 		val interfaceName = template.name.toFileName
+		val interfaceDir = GEN_TEMPLATES_INTERFACE_DIR
+		val interfacePkg = interfaceDir.replaceAll("/", ".").substring(0, interfaceDir.length - 1)
+		fsa.generateFile(interfaceDir + interfaceName + GEN_FILE_EXT, template.generateInterface(interfacePkg, interfaceName))
 		
-		fsa.generateFile(interfaceDir + interfaceName + '.java', template.generateInterfaceCode(interfacePackage, interfaceName))
+		val className = interfaceName + "Impl"
+		val classDir = GEN_TEMPLATES_IMPL_DIR
+		val classPkg = classDir.replaceAll("/", ".").substring(0, classDir.length - 1)
+		fsa.generateFile(classDir + className + GEN_FILE_EXT, template.generateClass(classPkg, className, interfacePkg, interfaceName))
 	}
 	
 	def dispatch generateElement(Microservice microservice, IFileSystemAccess2 fsa) {
 	}
 	
-	def dispatch generateInterfaceCode(Template template, String pkg, String name)'''
+	def dispatch generateInterface(Template template, String pkg, String name)'''
 		«generateHeader»
 		package «pkg»;
 		
@@ -74,7 +74,21 @@ class MicroLangGenerator extends AbstractGenerator {
 		}
 	'''
 	
-	def dispatch generateInterfaceCode(Microservice microservice, String pkg, String name)'''
+	def dispatch generateInterface(Microservice microservice, String pkg, String name)'''
+	'''
+	
+	def dispatch generateClass(Template template, String pkg, String name, String interfacePkg, String interfaceName)'''
+		«generateHeader»
+		package «pkg»;
+		
+		import «interfacePkg».«interfaceName»;
+		
+		public class «name» implements «interfaceName» {
+			//class impl
+		}
+	'''
+	
+	def dispatch generateClass(Microservice microservice, String pkg, String name, String interfacePkg, String interfaceName)'''
 	'''
 	
 	def dispatch generateDeclarationInterfaceCode(Uses uses)'''
@@ -87,13 +101,13 @@ class MicroLangGenerator extends AbstractGenerator {
 	
 	def dispatch generateDeclarationInterfaceCode(Endpoint endpoint)'''
 		«FOR operation : endpoint.operations»
-			«endpoint.generateMethodSignature(operation)»«operation.parameters.generateParameters»;
+			«endpoint.generateMethodSignature(operation)»;
 			
 		«ENDFOR»
 	'''
 	
 	def generateMethodSignature(Endpoint endpoint, Operation operation)
-		'''«operation.returnType.generateReturnCode» «endpoint.path.toMethodName(operation.method.name)»'''
+		'''«operation.returnType.generateReturnCode» «endpoint.path.toMethodName(operation.method.name)»«operation.parameters.generateParameters»'''
 	
 	def generateParameters(List<TypedParameter> params)
 		'''(«FOR param : params SEPARATOR ', '»«param.type.asString» _«param.name»«ENDFOR»)'''
