@@ -219,7 +219,6 @@ class MicroLangParsingTest {
 						
 						long number
 		'''.parse
-		model.assertNoErrors
 		val microservice = model.microservices.head
 		val operation = microservice.endpoints.head.operations.head
 		

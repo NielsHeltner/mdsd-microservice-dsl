@@ -21,13 +21,35 @@ class MicroLangValidationTest {
 	@Inject
 	extension ValidationTestHelper
 	
+	val epackage = MicroLangPackage.eINSTANCE
+	
 	@Test
-	def testMicroserviceUsesItself() {
+	def testMicroserviceUsesSelf() {
 		val model = '''
 			microservice TEST_SERVICE @ localhost:5000
 				uses TEST_SERVICE
 		'''.parse
-		model.assertError(MicroLangPackage.eINSTANCE.uses, MicroLangValidator.USES_SELF)
+		model.assertError(epackage.uses, MicroLangValidator.USES_SELF)
+	}
+	
+	@Test
+	def testUnreachableCode() {
+		val model = '''
+			microservice TEST_SERVICE @ localhost:5000
+				/path
+					GET
+						return int
+						string username
+		'''.parse
+		model.assertError(epackage.statement, MicroLangValidator.UNREACHABLE_CODE)
+	}
+	
+	@Test
+	def testParameterNotUsed() {
+		val model = '''
+			template TEST_TEMPLATE(param)
+		'''.parse
+		model.assertWarning(epackage.parameter, MicroLangValidator.PARAMETER_NOT_USED)
 	}
 	
 	@Test
@@ -35,7 +57,7 @@ class MicroLangValidationTest {
 		val model = '''
 			microservice testService @ localhost:5000
 		'''.parse
-		model.assertWarning(MicroLangPackage.eINSTANCE.microservice, MicroLangValidator.INVALID_MICROSERVICE_NAME)
+		model.assertWarning(epackage.microservice, MicroLangValidator.INVALID_MICROSERVICE_NAME)
 	}
 	
 	@Test
@@ -45,7 +67,7 @@ class MicroLangValidationTest {
 				/LOgiN
 					GET
 		'''.parse
-		model.assertWarning(MicroLangPackage.eINSTANCE.pathPart, MicroLangValidator.INVALID_ENDPOINT_PATH_NAME)
+		model.assertWarning(epackage.pathPart, MicroLangValidator.INVALID_ENDPOINT_PATH_NAME)
 	}
 	
 }
