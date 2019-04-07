@@ -10,6 +10,11 @@ import dk.sdu.mdsd.micro_lang.microLang.Microservice
 import dk.sdu.mdsd.micro_lang.microLang.NormalPath
 import dk.sdu.mdsd.micro_lang.microLang.Uses
 import org.eclipse.xtext.validation.Check
+import static extension org.eclipse.xtext.EcoreUtil2.getAllReferencedObjects
+import dk.sdu.mdsd.micro_lang.microLang.Parameter
+import dk.sdu.mdsd.micro_lang.microLang.Template
+import dk.sdu.mdsd.micro_lang.microLang.Operation
+import dk.sdu.mdsd.micro_lang.microLang.Return
 
 /**
  * This class contains custom validation rules. 
@@ -22,9 +27,13 @@ class MicroLangValidator extends AbstractMicroLangValidator {
 	
 	public static val USES_SELF = ISSUE_CODE_PREFIX + 'UsesSelf'
 	
+	public static val UNREACHABLE_CODE = ISSUE_CODE_PREFIX + 'UnreachableCode'
+	
 	public static val INVALID_MICROSERVICE_NAME = ISSUE_CODE_PREFIX + 'InvalidMicroserviceName'
 	
 	public static val INVALID_ENDPOINT_PATH_NAME = ISSUE_CODE_PREFIX + 'InvalidEndpointPathName'
+	
+	val epackage = MicroLangPackage.eINSTANCE
 	
 	@Inject
 	extension MicroLangModelUtil
@@ -37,6 +46,20 @@ class MicroLangValidator extends AbstractMicroLangValidator {
 				MicroLangPackage.eINSTANCE.uses_Target, 
 				USES_SELF, 
 				uses.target.name)
+		}
+	}
+	
+	@Check
+	def checkUnreachableCode(Operation operation) {
+		val statements = operation.statements
+		for (i : 0 ..< statements.size - 1) {
+			if (statements.get(i) instanceof Return) {
+				error('Unreachable code', 
+					statements.get(i + 1), 
+					null, 
+					UNREACHABLE_CODE)
+				return
+			}
 		}
 	}
 	
