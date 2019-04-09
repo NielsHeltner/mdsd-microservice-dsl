@@ -13,13 +13,8 @@ import dk.sdu.mdsd.micro_lang.microLang.Operation
 import dk.sdu.mdsd.micro_lang.microLang.Return
 import dk.sdu.mdsd.micro_lang.microLang.TypedParameter
 import dk.sdu.mdsd.micro_lang.microLang.Uses
-import java.io.File
-import java.io.FileInputStream
 import java.util.List
-import org.eclipse.core.resources.ResourcesPlugin
-import org.eclipse.core.runtime.FileLocator
 import org.eclipse.emf.ecore.resource.Resource
-import org.eclipse.jdt.core.JavaCore
 import org.eclipse.xtext.generator.AbstractGenerator
 import org.eclipse.xtext.generator.IFileSystemAccess2
 import org.eclipse.xtext.generator.IGeneratorContext

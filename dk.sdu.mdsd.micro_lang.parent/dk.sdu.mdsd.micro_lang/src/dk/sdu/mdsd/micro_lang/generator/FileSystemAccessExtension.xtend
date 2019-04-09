@@ -38,8 +38,10 @@ class FileSystemAccessExtension {
 	}
 	
 	def generateFileInSrc(IFileSystemAccess2 fsa, String fileName, CharSequence contents) {
-		
-		fsa.generateFile(SRC_DIR + fileName, contents)
+		val location = SRC_DIR + fileName
+		if (!fsa.isFile(location)) {
+			fsa.generateFile(location, contents)
+		}
 	}
 	
 	def addSrcGenToClassPath(IFileSystemAccess2 fsa) {
