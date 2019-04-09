@@ -6,20 +6,20 @@ package dk.sdu.mdsd.micro_lang.generator
 import com.google.common.base.CaseFormat
 import com.google.inject.Inject
 import dk.sdu.mdsd.micro_lang.MicroLangModelUtil
-import dk.sdu.mdsd.micro_lang.microLang.Element
 import dk.sdu.mdsd.micro_lang.microLang.Endpoint
 import dk.sdu.mdsd.micro_lang.microLang.Implements
 import dk.sdu.mdsd.micro_lang.microLang.Microservice
 import dk.sdu.mdsd.micro_lang.microLang.Operation
 import dk.sdu.mdsd.micro_lang.microLang.Return
-import dk.sdu.mdsd.micro_lang.microLang.Template
 import dk.sdu.mdsd.micro_lang.microLang.TypedParameter
 import dk.sdu.mdsd.micro_lang.microLang.Uses
 import java.io.File
 import java.io.FileInputStream
 import java.util.List
+import org.eclipse.core.resources.ResourcesPlugin
 import org.eclipse.core.runtime.FileLocator
 import org.eclipse.emf.ecore.resource.Resource
+import org.eclipse.jdt.core.JavaCore
 import org.eclipse.xtext.generator.AbstractGenerator
 import org.eclipse.xtext.generator.IFileSystemAccess2
 import org.eclipse.xtext.generator.IGeneratorContext
@@ -37,61 +37,77 @@ class MicroLangGenerator extends AbstractGenerator {
 	public static val GEN_FILE_EXT = ".java"
 	
 	public static val GEN_TEMPLATES_INTERFACE_DIR = "templates/"
-	public static val GEN_MICROSERVICES_INTERFACE_DIR = "microservices/"
+	public static val GEN_INTERFACE_DIR = "microservices/"
 	
 	public static val GEN_TEMPLATES_IMPL_DIR = GEN_TEMPLATES_INTERFACE_DIR + "impl/"
-	public static val GEN_MICROSERVICES_IMPL_DIR = GEN_MICROSERVICES_INTERFACE_DIR + "microservices/"
+	public static val GEN_ABSTRACT_DIR = GEN_INTERFACE_DIR + "abstr/"
+	
+	public static val SRC_DIR = "../src/"
+	public static val GEN_STUB_DIR = "impl/"
 	
 	public static val RES_LIB_DIR = 'src/resources/generator/'
 
 	override void doGenerate(Resource resource, IFileSystemAccess2 fsa, IGeneratorContext context) {
-		resource.allContents.filter(Element).forEach[generateElement(fsa)]
+		resource.allContents.filter(Microservice).forEach[generateMicroservice(fsa)]
 		
 		fsa.generateFilesFromDir(RES_LIB_DIR)
+		
+		fsa.addSrcGenToClassPath
 	}
 	
-	def dispatch generateElement(Template template, IFileSystemAccess2 fsa) {
-		val interfaceName = template.name.toFileName
-		val interfaceDir = GEN_TEMPLATES_INTERFACE_DIR
+	def generateMicroservice(Microservice microservice, IFileSystemAccess2 fsa) {
+		val interfaceName = microservice.name.toFileName
+		val interfaceDir = GEN_INTERFACE_DIR
 		val interfacePkg = interfaceDir.replaceAll("/", ".").substring(0, interfaceDir.length - 1)
-		fsa.generateFile(interfaceDir + interfaceName + GEN_FILE_EXT, template.generateInterface(interfacePkg, interfaceName))
+		fsa.generateFile(interfaceDir + interfaceName + GEN_FILE_EXT, microservice.generateInterface(interfacePkg, interfaceName))
+		
+		val abstractName = "Abstract" + interfaceName
+		val abstractDir = GEN_ABSTRACT_DIR
+		val abstractPkg = abstractDir.replaceAll("/", ".").substring(0, abstractDir.length - 1)
+		fsa.generateFile(abstractDir + abstractName + GEN_FILE_EXT, microservice.generateAbstractClass(abstractPkg, abstractName, interfacePkg, interfaceName))
 		
 		val className = interfaceName + "Impl"
-		val classDir = GEN_TEMPLATES_IMPL_DIR
+		val classDir = GEN_STUB_DIR
 		val classPkg = classDir.replaceAll("/", ".").substring(0, classDir.length - 1)
-		fsa.generateFile(classDir + className + GEN_FILE_EXT, template.generateClass(classPkg, className, interfacePkg, interfaceName))
+		fsa.generateFileInSrc(classDir + className + GEN_FILE_EXT, microservice.generateStubClass(classPkg, className, abstractPkg, abstractName))
 	}
 	
-	def dispatch generateElement(Microservice microservice, IFileSystemAccess2 fsa) {
-	}
-	
-	def dispatch generateInterface(Template template, String pkg, String name)'''
+	def generateInterface(Microservice microservice, String pkg, String name)'''
 		«generateHeader»
 		package «pkg»;
 		
 		public interface «name» {
 			
-			«FOR declaration : template.declarations»
-			«declaration.generateDeclarationInterfaceCode»
+			String HOST = "«microservice.location.host»";
+			int PORT = «microservice.location.port»;
+			
+			«FOR declaration : microservice.declarations»
+				«declaration.generateDeclarationInterfaceCode»
 			«ENDFOR»
 		}
 	'''
 	
-	def dispatch generateInterface(Microservice microservice, String pkg, String name)'''
-	'''
-	
-	def dispatch generateClass(Template template, String pkg, String name, String interfacePkg, String interfaceName)'''
+	def generateAbstractClass(Microservice microservice, String pkg, String name, String interfacePkg, String interfaceName)'''
 		«generateHeader»
 		package «pkg»;
 		
 		import «interfacePkg».«interfaceName»;
 		
 		public class «name» implements «interfaceName» {
+			// for each uses create new field
 			//class impl
 		}
 	'''
 	
-	def dispatch generateClass(Microservice microservice, String pkg, String name, String interfacePkg, String interfaceName)'''
+	def generateStubClass(Microservice microservice, String pkg, String name, String abstractPkg, String abstractName)'''
+		«generateHeader»
+		package «pkg»;
+		
+		import «abstractPkg».«abstractName»;
+		
+		public class «name» extends «abstractName» {
+			//class impl
+		}
 	'''
 	
 	def dispatch generateDeclarationInterfaceCode(Uses uses)'''
@@ -140,15 +156,31 @@ class MicroLangGenerator extends AbstractGenerator {
 		for (resource : dir.listFiles) {
 			val path = resource.toURI.path
 			switch resource {
-				case resource.isFile: fsa.generateFileFromResource(path, path.substring(genDirStartIndex))
+				case resource.isFile: fsa.generateFileFromResource(path.substring(genDirStartIndex), path)
 				case resource.isDirectory: fsa.generateFilesFromDir(resource.toURI.path.substring(relativePathStartIndex))
 			}
 		}
 	}
 	
-	def generateFileFromResource(IFileSystemAccess2 fsa, String resource, String fileName) {
+	def addSrcGenToClassPath(IFileSystemAccess2 fsa) {
+		val project = ResourcesPlugin.workspace.root.findMember(fsa.getURI('').toPlatformString(true)).project
+		JavaCore.create(project) => [
+			val srcGenEntry = JavaCore.newSourceEntry(path.append("src-gen"), null)
+			val classPathEntries = newArrayList(rawClasspath)
+			if (!classPathEntries.contains(srcGenEntry)) {
+				classPathEntries.add(srcGenEntry)
+				setRawClasspath(classPathEntries, null)
+			}
+		]
+	}
+	
+	def generateFileFromResource(IFileSystemAccess2 fsa, String fileName, String resource) {
 		val inputStream = new FileInputStream(resource)
 		fsa.generateFile(fileName, inputStream)
+	}
+	
+	def generateFileInSrc(IFileSystemAccess2 fsa, String fileName, CharSequence contents) {
+		fsa.generateFile(SRC_DIR + fileName, contents)
 	}
 	
 	def generateHeader()'''
