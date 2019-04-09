@@ -34,15 +34,13 @@ class MicroLangGenerator extends AbstractGenerator {
 	@Inject
 	extension MicroLangModelUtil
 	
+	@Inject
+	extension FileSystemAccessExtension
+	
 	public static val GEN_FILE_EXT = ".java"
 	
-	public static val GEN_TEMPLATES_INTERFACE_DIR = "templates/"
 	public static val GEN_INTERFACE_DIR = "microservices/"
-	
-	public static val GEN_TEMPLATES_IMPL_DIR = GEN_TEMPLATES_INTERFACE_DIR + "impl/"
 	public static val GEN_ABSTRACT_DIR = GEN_INTERFACE_DIR + "abstr/"
-	
-	public static val SRC_DIR = "../src/"
 	public static val GEN_STUB_DIR = "impl/"
 	
 	public static val RES_LIB_DIR = 'src/resources/generator/'
@@ -143,44 +141,6 @@ class MicroLangGenerator extends AbstractGenerator {
 		val operationName = operation.toLowerCase
 		pathName = CaseFormat.LOWER_UNDERSCORE.to(CaseFormat.UPPER_CAMEL, pathName)
 		operationName + pathName
-	}
-	
-	/**
-	 * Recursively copies every file in the directory.
-	 */
-	def void generateFilesFromDir(IFileSystemAccess2 fsa, String dirName) {
-		val dirPath = FileLocator.resolve(class.classLoader.getResource(dirName)).path
-		val relativePathStartIndex = dirPath.indexOf(RES_LIB_DIR)
-		val genDirStartIndex = relativePathStartIndex + RES_LIB_DIR.length
-		val dir = new File(dirPath)
-		for (resource : dir.listFiles) {
-			val path = resource.toURI.path
-			switch resource {
-				case resource.isFile: fsa.generateFileFromResource(path.substring(genDirStartIndex), path)
-				case resource.isDirectory: fsa.generateFilesFromDir(resource.toURI.path.substring(relativePathStartIndex))
-			}
-		}
-	}
-	
-	def addSrcGenToClassPath(IFileSystemAccess2 fsa) {
-		val project = ResourcesPlugin.workspace.root.findMember(fsa.getURI('').toPlatformString(true)).project
-		JavaCore.create(project) => [
-			val srcGenEntry = JavaCore.newSourceEntry(path.append("src-gen"), null)
-			val classPathEntries = newArrayList(rawClasspath)
-			if (!classPathEntries.contains(srcGenEntry)) {
-				classPathEntries.add(srcGenEntry)
-				setRawClasspath(classPathEntries, null)
-			}
-		]
-	}
-	
-	def generateFileFromResource(IFileSystemAccess2 fsa, String fileName, String resource) {
-		val inputStream = new FileInputStream(resource)
-		fsa.generateFile(fileName, inputStream)
-	}
-	
-	def generateFileInSrc(IFileSystemAccess2 fsa, String fileName, CharSequence contents) {
-		fsa.generateFile(SRC_DIR + fileName, contents)
 	}
 	
 	def generateHeader()'''
