@@ -26,5 +26,6 @@ Export-Package: dk.sdu.mdsd.micro_lang,
  dk.sdu.mdsd.micro_lang.scoping,
  dk.sdu.mdsd.micro_lang.generator,
  dk.sdu.mdsd.micro_lang.serializer,
- dk.sdu.mdsd.micro_lang.parser.antlr
+ dk.sdu.mdsd.micro_lang.parser.antlr,
+ dk.sdu.mdsd.micro_lang.parser.antlr.lexer
 Import-Package: org.apache.log4j

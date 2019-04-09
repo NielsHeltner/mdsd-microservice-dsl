@@ -3,11 +3,26 @@
  */
 package dk.sdu.mdsd.micro_lang.generator
 
+import com.google.common.base.CaseFormat
+import com.google.inject.Inject
+import dk.sdu.mdsd.micro_lang.MicroLangModelUtil
+import dk.sdu.mdsd.micro_lang.microLang.Element
+import dk.sdu.mdsd.micro_lang.microLang.Endpoint
+import dk.sdu.mdsd.micro_lang.microLang.Implements
+import dk.sdu.mdsd.micro_lang.microLang.Microservice
+import dk.sdu.mdsd.micro_lang.microLang.Operation
+import dk.sdu.mdsd.micro_lang.microLang.Return
+import dk.sdu.mdsd.micro_lang.microLang.Template
+import dk.sdu.mdsd.micro_lang.microLang.TypedParameter
+import dk.sdu.mdsd.micro_lang.microLang.Uses
+import java.io.File
+import java.io.FileInputStream
+import java.util.List
+import org.eclipse.core.runtime.FileLocator
 import org.eclipse.emf.ecore.resource.Resource
 import org.eclipse.xtext.generator.AbstractGenerator
 import org.eclipse.xtext.generator.IFileSystemAccess2
 import org.eclipse.xtext.generator.IGeneratorContext
-import dk.sdu.mdsd.micro_lang.microLang.Endpoint
 
 /**
  * Generates code from your model files on save.
@@ -15,12 +30,131 @@ import dk.sdu.mdsd.micro_lang.microLang.Endpoint
  * See https://www.eclipse.org/Xtext/documentation/303_runtime_concepts.html#code-generation
  */
 class MicroLangGenerator extends AbstractGenerator {
+	
+	@Inject
+	extension MicroLangModelUtil
+	
+	public static val GEN_FILE_EXT = ".java"
+	
+	public static val GEN_TEMPLATES_INTERFACE_DIR = "templates/"
+	public static val GEN_MICROSERVICES_INTERFACE_DIR = "microservices/"
+	
+	public static val GEN_TEMPLATES_IMPL_DIR = GEN_TEMPLATES_INTERFACE_DIR + "impl/"
+	public static val GEN_MICROSERVICES_IMPL_DIR = GEN_MICROSERVICES_INTERFACE_DIR + "microservices/"
+	
+	public static val RES_LIB_DIR = 'src/resources/generator/'
 
 	override void doGenerate(Resource resource, IFileSystemAccess2 fsa, IGeneratorContext context) {
-//		fsa.generateFile('greetings.txt', 'People to greet: ' + 
-//			resource.allContents
-//				.filter(Greeting)
-//				.map[name]
-//				.join(', '))
+		resource.allContents.filter(Element).forEach[generateElement(fsa)]
+		
+		fsa.generateFilesFromDir(RES_LIB_DIR)
 	}
+	
+	def dispatch generateElement(Template template, IFileSystemAccess2 fsa) {
+		val interfaceName = template.name.toFileName
+		val interfaceDir = GEN_TEMPLATES_INTERFACE_DIR
+		val interfacePkg = interfaceDir.replaceAll("/", ".").substring(0, interfaceDir.length - 1)
+		fsa.generateFile(interfaceDir + interfaceName + GEN_FILE_EXT, template.generateInterface(interfacePkg, interfaceName))
+		
+		val className = interfaceName + "Impl"
+		val classDir = GEN_TEMPLATES_IMPL_DIR
+		val classPkg = classDir.replaceAll("/", ".").substring(0, classDir.length - 1)
+		fsa.generateFile(classDir + className + GEN_FILE_EXT, template.generateClass(classPkg, className, interfacePkg, interfaceName))
+	}
+	
+	def dispatch generateElement(Microservice microservice, IFileSystemAccess2 fsa) {
+	}
+	
+	def dispatch generateInterface(Template template, String pkg, String name)'''
+		«generateHeader»
+		package «pkg»;
+		
+		public interface «name» {
+			
+			«FOR declaration : template.declarations»
+			«declaration.generateDeclarationInterfaceCode»
+			«ENDFOR»
+		}
+	'''
+	
+	def dispatch generateInterface(Microservice microservice, String pkg, String name)'''
+	'''
+	
+	def dispatch generateClass(Template template, String pkg, String name, String interfacePkg, String interfaceName)'''
+		«generateHeader»
+		package «pkg»;
+		
+		import «interfacePkg».«interfaceName»;
+		
+		public class «name» implements «interfaceName» {
+			//class impl
+		}
+	'''
+	
+	def dispatch generateClass(Microservice microservice, String pkg, String name, String interfacePkg, String interfaceName)'''
+	'''
+	
+	def dispatch generateDeclarationInterfaceCode(Uses uses)'''
+		//code for injecting microservice
+	'''
+	
+	def dispatch generateDeclarationInterfaceCode(Implements implement)'''
+		//code for implementing a template
+	'''
+	
+	def dispatch generateDeclarationInterfaceCode(Endpoint endpoint)'''
+		«FOR operation : endpoint.operations»
+			«endpoint.generateMethodSignature(operation)»;
+			
+		«ENDFOR»
+	'''
+	
+	def generateMethodSignature(Endpoint endpoint, Operation operation)
+		'''«operation.returnType.generateReturnCode» «endpoint.path.toMethodName(operation.method.name)»«operation.parameters.generateParameters»'''
+	
+	def generateParameters(List<TypedParameter> params)
+		'''(«FOR param : params SEPARATOR ', '»«param.type.asString» _«param.name»«ENDFOR»)'''
+	
+	def generateReturnCode(Return returnType)
+		'''«IF returnType === null»void«ELSE»«returnType.type.asString»«ENDIF»'''
+	
+	def toFileName(String name) {
+		CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.UPPER_CAMEL, name)
+	}
+	
+	def toMethodName(String path, String operation) {
+		var pathName = path.replaceAll("/", "_")
+		val operationName = operation.toLowerCase
+		pathName = CaseFormat.LOWER_UNDERSCORE.to(CaseFormat.UPPER_CAMEL, pathName)
+		operationName + pathName
+	}
+	
+	/**
+	 * Recursively copies every file in the directory.
+	 */
+	def void generateFilesFromDir(IFileSystemAccess2 fsa, String dirName) {
+		val dirPath = FileLocator.resolve(class.classLoader.getResource(dirName)).path
+		val relativePathStartIndex = dirPath.indexOf(RES_LIB_DIR)
+		val genDirStartIndex = relativePathStartIndex + RES_LIB_DIR.length
+		val dir = new File(dirPath)
+		for (resource : dir.listFiles) {
+			val path = resource.toURI.path
+			switch resource {
+				case resource.isFile: fsa.generateFileFromResource(path, path.substring(genDirStartIndex))
+				case resource.isDirectory: fsa.generateFilesFromDir(resource.toURI.path.substring(relativePathStartIndex))
+			}
+		}
+	}
+	
+	def generateFileFromResource(IFileSystemAccess2 fsa, String resource, String fileName) {
+		val inputStream = new FileInputStream(resource)
+		fsa.generateFile(fileName, inputStream)
+	}
+	
+	def generateHeader()'''
+		/**
+		 * Generated by MicroLang
+		 */
+ 	'''
+	
 }

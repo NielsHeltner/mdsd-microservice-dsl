@@ -5,12 +5,17 @@ package dk.sdu.mdsd.micro_lang.validation
 
 import com.google.inject.Inject
 import dk.sdu.mdsd.micro_lang.MicroLangModelUtil
-import dk.sdu.mdsd.micro_lang.microLang.Endpoint
 import dk.sdu.mdsd.micro_lang.microLang.MicroLangPackage
 import dk.sdu.mdsd.micro_lang.microLang.Microservice
-import org.eclipse.xtext.validation.Check
-import dk.sdu.mdsd.micro_lang.microLang.Uses
 import dk.sdu.mdsd.micro_lang.microLang.NormalPath
+import dk.sdu.mdsd.micro_lang.microLang.Operation
+import dk.sdu.mdsd.micro_lang.microLang.Parameter
+import dk.sdu.mdsd.micro_lang.microLang.Return
+import dk.sdu.mdsd.micro_lang.microLang.Uses
+import org.eclipse.xtext.validation.Check
+
+import static org.eclipse.emf.ecore.util.EcoreUtil.UsageCrossReferencer.find
+import dk.sdu.mdsd.micro_lang.microLang.Implements
 
 /**
  * This class contains custom validation rules. 
@@ -23,26 +28,68 @@ class MicroLangValidator extends AbstractMicroLangValidator {
 	
 	public static val USES_SELF = ISSUE_CODE_PREFIX + 'UsesSelf'
 	
+	public static val UNREACHABLE_CODE = ISSUE_CODE_PREFIX + 'UnreachableCode'
+	
+	public static val INVALID_AMOUNT_ARGS = ISSUE_CODE_PREFIX + 'InvalidAmountArgs'
+	
+	public static val PARAMETER_NOT_USED = ISSUE_CODE_PREFIX + 'ParameterNotUsed'
+	
 	public static val INVALID_MICROSERVICE_NAME = ISSUE_CODE_PREFIX + 'InvalidMicroserviceName'
 	
 	public static val INVALID_ENDPOINT_PATH_NAME = ISSUE_CODE_PREFIX + 'InvalidEndpointPathName'
 	
-	public static val ENDPOINT_PATH_MULTIPLE_SLASHES = ISSUE_CODE_PREFIX + 'EndpointPathMultipleSlashes'
+	val epackage = MicroLangPackage.eINSTANCE
 	
 	@Inject
 	extension MicroLangModelUtil
 	
 	@Check
 	def checkSelfNotInUses(Uses uses) {
-		if (uses.target === null) {
-			return
-		}
 		val container = uses.eContainer as Microservice
 		if (uses.target === container) {
 			error('Microservice "' + container.name + '" references itself', 
-				MicroLangPackage.eINSTANCE.uses_Target, 
+				uses, 
+				epackage.uses_Target, 
 				USES_SELF, 
 				uses.target.name)
+		}
+	}
+	
+	@Check
+	def checkUnreachableCode(Operation operation) {
+		val statements = operation.statements
+		for (i : 0 ..< statements.size - 1) {
+			if (statements.get(i) instanceof Return) {
+				error('Unreachable code', 
+					statements.get(i + 1), 
+					null, 
+					UNREACHABLE_CODE)
+				return
+			}
+		}
+	}
+	
+	@Check
+	def checkImplementCorrectAmountArgs(Implements implement) {
+		val template = implement.target
+		val expected = template.parameters.size
+		val actual = implement.arguments.size
+		if (actual != expected) {
+			error('Invalid number of arguments. Expected ' + expected + ' but received ' + actual, 
+					implement, 
+					null, 
+					INVALID_AMOUNT_ARGS)
+		}
+	}
+	
+	@Check
+	def checkParameterIsUsed(Parameter parameter) {
+		val references = find(parameter, parameter.eContainer)
+		if (references.empty) {
+			warning('The parameter "' + parameter.name + '" is not used', 
+				parameter, 
+				null, 
+				PARAMETER_NOT_USED)
 		}
 	}
 	
@@ -50,7 +97,8 @@ class MicroLangValidator extends AbstractMicroLangValidator {
 	def checkMicroserviceNameIsUpperCase(Microservice microservice) {
 		if (!microservice.name.equals(microservice.name.toUpperCase)) {
 			warning('Microservice name should be written in upper case', 
-				MicroLangPackage.eINSTANCE.microservice_Name, 
+				microservice, 
+				epackage.element_Name, 
 				INVALID_MICROSERVICE_NAME, 
 				microservice.name)
 		}
@@ -58,23 +106,16 @@ class MicroLangValidator extends AbstractMicroLangValidator {
 	
 	@Check
 	def checkNormalPathIsLowerCase(NormalPath path) {
-		val name = path.path
+		if (path.name === null) {
+			return
+		}
+		val name = path.name
 		if(!name.equals(name.toLowerCase)) {
 			warning('Endpoint path should be written in lower case', 
-					MicroLangPackage.eINSTANCE.pathPart_Path, 
+					path,
+					epackage.normalPath_Name,  
 					INVALID_ENDPOINT_PATH_NAME, 
 					name)
-		}
-	}
-	
-	@Check
-	def checkEndpointOnlyOneSlash(Endpoint endpoint) {
-		if (endpoint.path.contains('//')) {
-			warning('Endpoint path should not contain consecutive slashes', 
-					MicroLangPackage.eINSTANCE.endpoint_PathParts, 
-					endpoint.pathParts.indexOf('//'), 
-					ENDPOINT_PATH_MULTIPLE_SLASHES, 
-					endpoint.path)
 		}
 	}
 	

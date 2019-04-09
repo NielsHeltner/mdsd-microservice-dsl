@@ -3,35 +3,51 @@ grammar dk.sdu.mdsd.micro_lang.MicroLang with org.eclipse.xtext.common.Terminals
 generate microLang "http://www.sdu.dk/mdsd/micro_lang/MicroLang"
 
 Model:
-	microservices+=Microservice*
+	elements+=Element*
 ;
-	
-Microservice:
-	'microservice' name=ID location=Location '{'
+
+terminal BEGIN: 'synthetic:BEGIN';
+terminal END: 'synthetic:END';
+
+Element:
+	Template | Microservice
+;
+
+Template:
+	'template' name=ID ('(' parameters+=Parameter (',' parameters+=Parameter)* ')')?
+	(BEGIN
 		declarations+=Declaration*
-	'}'
+	END)*
+;
+
+Microservice:
+	'microservice' name=ID location=Location
+	(BEGIN
+		declarations+=Declaration*
+	END)*
 ;
 
 Location:
-	'@' location=ID ':' port=INT
+	'@' host=ID ':' port=INT
 ;
 
 Declaration:
-	Uses | Endpoint
+	Uses | Implements | Endpoint
 ;
 
 Uses:
 	'uses' target=[Microservice]
 ;
 
-Endpoint:
-	method=Method pathParts+=PathPart+ ('{'
-		statements+=Statement*
-	'}')?
+Implements:
+	'implements' target=[Template] ('(' arguments+=ID (',' arguments+=ID)* ')')?
 ;
 
-Method:
-	'GET' | 'POST' | 'PUT' | 'DELETE' | 'OPTIONS'
+Endpoint:
+	pathParts+=PathPart+
+	BEGIN
+		operations+=Operation+
+	END
 ;
 
 PathPart:
@@ -39,27 +55,43 @@ PathPart:
 ;
 
 NormalPath:
-	path = NormalPathText
+	'/' (name=ID | '{' target=[Parameter] '}')
 ;
 
 ParameterPath:
-	path = ParameterPathText
+	'/' '{' parameter=TypedParameter '}'
 ;
 
-NormalPathText:
-	'/' (ID)?
+Operation:
+	method=Method
+	(BEGIN
+		statements+=Statement*
+	END)*
 ;
 
-ParameterPathText:
-	'/' '{' ID '}'
+Method:
+	name=('GET' | 'POST' | 'PUT' | 'DELETE' | 'OPTIONS') | '{' target=[Parameter] '}'
 ;
 
 Statement:
-	Parameter | Return
+	TypedParameter | Require | Return
 ;
 
 Parameter:
-	type=Type name=ID
+	name=ID
+;
+
+TypedParameter:
+	type=Type (name=ID | '{' target=[Parameter] '}')
+;
+
+Require:
+	'require' logic=Logic
+;
+
+Logic:
+	'l'
+	//boolean logic omitted for brevity
 ;
 
 Return:
@@ -67,5 +99,9 @@ Return:
 ;
 
 Type:
-	('bool' | 'char' | 'string' | 'int' | 'long' | 'float' | 'double') ('['']')?
+	name=('bool' | 'char' | 'string' | 'int' | 'long' | 'float' | 'double') arrays+=(Array)* | '{' target=[Parameter] '}'
+;
+
+Array:
+	'[' ']'
 ;
