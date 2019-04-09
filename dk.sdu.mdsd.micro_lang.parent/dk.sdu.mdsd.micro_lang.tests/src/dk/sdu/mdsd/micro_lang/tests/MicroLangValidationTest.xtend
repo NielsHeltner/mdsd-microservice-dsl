@@ -45,6 +45,22 @@ class MicroLangValidationTest {
 	}
 	
 	@Test
+	def testInvalidAmountArgs() {
+		val model = '''
+			template TEMP(a, b)
+				/{a}
+					GET
+						return {b}
+			microservice TEST_SERVICE @ localhost:5000
+				implements TEMP(a)
+				/path
+					GET
+						return int
+		'''.parse
+		model.assertError(epackage.implements, MicroLangValidator.INVALID_AMOUNT_ARGS)
+	}
+	
+	@Test
 	def testParameterNotUsed() {
 		val model = '''
 			template TEST_TEMPLATE(param)

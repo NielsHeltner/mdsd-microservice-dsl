@@ -15,6 +15,7 @@ import dk.sdu.mdsd.micro_lang.microLang.Uses
 import org.eclipse.xtext.validation.Check
 
 import static org.eclipse.emf.ecore.util.EcoreUtil.UsageCrossReferencer.find
+import dk.sdu.mdsd.micro_lang.microLang.Implements
 
 /**
  * This class contains custom validation rules. 
@@ -28,6 +29,8 @@ class MicroLangValidator extends AbstractMicroLangValidator {
 	public static val USES_SELF = ISSUE_CODE_PREFIX + 'UsesSelf'
 	
 	public static val UNREACHABLE_CODE = ISSUE_CODE_PREFIX + 'UnreachableCode'
+	
+	public static val INVALID_AMOUNT_ARGS = ISSUE_CODE_PREFIX + 'InvalidAmountArgs'
 	
 	public static val PARAMETER_NOT_USED = ISSUE_CODE_PREFIX + 'ParameterNotUsed'
 	
@@ -63,6 +66,19 @@ class MicroLangValidator extends AbstractMicroLangValidator {
 					UNREACHABLE_CODE)
 				return
 			}
+		}
+	}
+	
+	@Check
+	def checkImplementCorrectAmountArgs(Implements implement) {
+		val template = implement.target
+		val expected = template.parameters.size
+		val actual = implement.arguments.size
+		if (actual != expected) {
+			error('Invalid number of arguments. Expected ' + expected + ' but received ' + actual, 
+					implement, 
+					null, 
+					INVALID_AMOUNT_ARGS)
 		}
 	}
 	
