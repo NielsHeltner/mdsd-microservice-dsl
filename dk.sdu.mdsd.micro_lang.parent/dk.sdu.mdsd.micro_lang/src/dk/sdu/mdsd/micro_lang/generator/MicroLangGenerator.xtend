@@ -18,6 +18,7 @@ import org.eclipse.emf.ecore.resource.Resource
 import org.eclipse.xtext.generator.AbstractGenerator
 import org.eclipse.xtext.generator.IFileSystemAccess2
 import org.eclipse.xtext.generator.IGeneratorContext
+import dk.sdu.mdsd.micro_lang.microLang.Model
 
 /**
  * Generates code from your model files on save.
@@ -36,6 +37,7 @@ class MicroLangGenerator extends AbstractGenerator {
 	
 	public static val GEN_INTERFACE_DIR = "microservices/"
 	public static val GEN_ABSTRACT_DIR = GEN_INTERFACE_DIR + "abstr/"
+	public static val SRC_DIR = "../src/"
 	public static val GEN_STUB_DIR = "impl/"
 	
 	public static val RES_LIB_DIR = 'src/resources/generator/'
@@ -60,9 +62,10 @@ class MicroLangGenerator extends AbstractGenerator {
 		fsa.generateFile(abstractDir + abstractName + GEN_FILE_EXT, microservice.generateAbstractClass(abstractPkg, abstractName, interfacePkg, interfaceName))
 		
 		val className = interfaceName + "Impl"
-		val classDir = GEN_STUB_DIR
-		val classPkg = classDir.replaceAll("/", ".").substring(0, classDir.length - 1)
-		fsa.generateFileInSrc(classDir + className + GEN_FILE_EXT, microservice.generateStubClass(classPkg, className, abstractPkg, abstractName))
+		val classDir = SRC_DIR + GEN_STUB_DIR
+		val classPkg = GEN_STUB_DIR.replaceAll("/", ".").substring(0, GEN_STUB_DIR.length - 1)
+		fsa.generateFileIfAbsent(classDir + className + GEN_FILE_EXT, microservice.generateStubClass(classPkg, className, abstractPkg, abstractName))
+		fsa.setFilesAsNotDerived(classDir)
 	}
 	
 	def generateInterface(Microservice microservice, String pkg, String name)'''
@@ -85,9 +88,16 @@ class MicroLangGenerator extends AbstractGenerator {
 		package «pkg»;
 		
 		import «interfacePkg».«interfaceName»;
+		«FOR uses : microservice.uses»
+		import «interfacePkg».«uses.name.toFileName»;
+		«ENDFOR»
 		
-		public class «name» implements «interfaceName» {
-			// for each uses create new field
+		public abstract class «name» implements «interfaceName» {
+			
+			«FOR uses : microservice.uses»
+			protected «uses.name.toFileName» «uses.name.toAttributeName»;
+			«ENDFOR»
+			
 			//class impl
 		}
 	'''
@@ -129,6 +139,10 @@ class MicroLangGenerator extends AbstractGenerator {
 	
 	def toFileName(String name) {
 		CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.UPPER_CAMEL, name)
+	}
+	
+	def toAttributeName(String name) {
+		CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL, name)
 	}
 	
 	def toMethodName(String path, String operation) {
