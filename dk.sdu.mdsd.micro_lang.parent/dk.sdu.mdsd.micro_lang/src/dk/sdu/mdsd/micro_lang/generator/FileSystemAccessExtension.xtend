@@ -1,15 +1,17 @@
 package dk.sdu.mdsd.micro_lang.generator
 
-import org.eclipse.xtext.generator.IFileSystemAccess2
-import org.eclipse.core.runtime.FileLocator
 import java.io.File
-import org.eclipse.core.resources.ResourcesPlugin
-import org.eclipse.jdt.core.JavaCore
 import java.io.FileInputStream
+import org.eclipse.core.resources.IFolder
+import org.eclipse.core.resources.ResourcesPlugin
+import org.eclipse.core.runtime.FileLocator
+import org.eclipse.jdt.core.JavaCore
+import org.eclipse.xtext.generator.IFileSystemAccess2
+
+import static org.eclipse.core.resources.IResource.FILE
+import static org.eclipse.core.resources.IResource.FOLDER
 
 class FileSystemAccessExtension {
-	
-	public static val SRC_DIR = "../src/"
 	
 	/**
 	 * Recursively copies every file in the directory.
@@ -37,10 +39,19 @@ class FileSystemAccessExtension {
 		fsa.generateFile(fileName, inputStream)
 	}
 	
-	def generateFileInSrc(IFileSystemAccess2 fsa, String fileName, CharSequence contents) {
-		val location = SRC_DIR + fileName
-		if (!fsa.isFile(location)) {
-			fsa.generateFile(location, contents)
+	def generateFileIfAbsent(IFileSystemAccess2 fsa, String fileName, CharSequence contents) {
+		if (!fsa.isFile(fileName)) {
+			fsa.generateFile(fileName, contents)
+		}
+	}
+	
+	def void setFilesAsNotDerived(IFileSystemAccess2 fsa, String path) {
+		val folder = ResourcesPlugin.workspace.root.findMember(fsa.getURI(path).toPlatformString(true)) as IFolder
+		for (resource : folder.members) {
+			switch resource.type {
+				case FILE: resource.setDerived(false, null)
+				case FOLDER: fsa.setFilesAsNotDerived(resource.projectRelativePath.toOSString)
+			}
 		}
 	}
 	
