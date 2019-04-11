@@ -133,8 +133,16 @@ class MicroLangGenerator extends AbstractGenerator {
 	def generateParameters(List<TypedParameter> params)
 		'''(«FOR param : params SEPARATOR ', '»«param.type.asString» _«param.name»«ENDFOR»)'''
 	
-	def generateReturnCode(Return returnType)
-		'''«IF returnType === null»void«ELSE»«returnType.type.asString»«ENDIF»'''
+	def generateReturnCode(Return returnType) {
+		if (returnType === null) {
+			return '''void'''
+		}
+		switch returnType.type.asString { // doesn't properly handle []'s for string and bool
+			case "string": '''String'''
+			case "bool": '''boolean'''
+			default: '''«returnType.type.asString»'''
+		}
+	}
 	
 	def toFileName(String name) {
 		CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.UPPER_CAMEL, name)
