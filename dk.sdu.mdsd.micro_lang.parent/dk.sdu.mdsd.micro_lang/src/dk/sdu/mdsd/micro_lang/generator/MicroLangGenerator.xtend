@@ -18,6 +18,8 @@ import org.eclipse.emf.ecore.resource.Resource
 import org.eclipse.xtext.generator.AbstractGenerator
 import org.eclipse.xtext.generator.IFileSystemAccess2
 import org.eclipse.xtext.generator.IGeneratorContext
+import dk.sdu.mdsd.micro_lang.microLang.Type
+import dk.sdu.mdsd.micro_lang.microLang.NormalPath
 
 /**
  * Generates code from your model files on save.
@@ -108,7 +110,13 @@ class MicroLangGenerator extends AbstractGenerator {
 		import «abstractPkg».«abstractName»;
 		
 		public class «name» extends «abstractName» {
-			//class impl
+			
+			«FOR endpoint : microservice.endpoints»
+				«FOR operation : endpoint.operations»
+					«endpoint.generateStubMethod(operation)»
+					
+				«ENDFOR»
+			«ENDFOR»
 		}
 	'''
 	
@@ -127,21 +135,45 @@ class MicroLangGenerator extends AbstractGenerator {
 		«ENDFOR»
 	'''
 	
+	def generateStubMethod(Endpoint endpoint, Operation operation)'''
+		@Override
+		public «endpoint.generateMethodSignature(operation)» {
+			//TODO: implement endpoint logic here
+			«operation.returnType.generateStubReturn»
+		}
+	'''
+	
+	def generateStubReturn(Return returnType) {
+		if (returnType === null) {
+			return ''''''
+		}
+		switch returnType.type.name {
+			case "bool": '''return false;'''
+			case "int": '''return 0;'''
+			default: '''return null;'''
+		}
+	}
+	
 	def generateMethodSignature(Endpoint endpoint, Operation operation)
-		'''«operation.returnType.generateReturnCode» «endpoint.path.toMethodName(operation.method.name)»«operation.parameters.generateParameters»'''
+		'''«operation.returnType.generateReturn» «endpoint.toMethodName(operation)»«endpoint.parameters(operation).generateParameters»'''
 	
 	def generateParameters(List<TypedParameter> params)
-		'''(«FOR param : params SEPARATOR ', '»«param.type.asString» _«param.name»«ENDFOR»)'''
+		'''(«FOR param : params SEPARATOR ', '»«param.type.generateType» _«param.name»«ENDFOR»)'''
 	
-	def generateReturnCode(Return returnType) {
+	def generateReturn(Return returnType) {
 		if (returnType === null) {
 			return '''void'''
 		}
-		switch returnType.type.asString { // doesn't properly handle []'s for string and bool
-			case "string": '''String'''
-			case "bool": '''boolean'''
-			default: '''«returnType.type.asString»'''
+		'''«returnType.type.generateType»'''
+	}
+	
+	def generateType(Type type) {
+		val name = switch type.name {
+			case "string": "String"
+			case "bool": "boolean"
+			default: type.name
 		}
+		name + type.arrays.join
 	}
 	
 	def toFileName(String name) {
@@ -152,9 +184,9 @@ class MicroLangGenerator extends AbstractGenerator {
 		CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL, name)
 	}
 	
-	def toMethodName(String path, String operation) {
-		var pathName = path.replaceAll("/", "_")
-		val operationName = operation.toLowerCase
+	def toMethodName(Endpoint endpoint, Operation operation) {
+		var pathName = endpoint.pathParts.filter(NormalPath).map[name].join("_")
+		val operationName = operation.method.name.toLowerCase
 		pathName = CaseFormat.LOWER_UNDERSCORE.to(CaseFormat.UPPER_CAMEL, pathName)
 		operationName + pathName
 	}

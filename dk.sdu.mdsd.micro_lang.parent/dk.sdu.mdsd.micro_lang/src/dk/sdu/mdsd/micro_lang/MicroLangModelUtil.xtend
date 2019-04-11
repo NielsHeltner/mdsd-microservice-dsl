@@ -43,6 +43,12 @@ class MicroLangModelUtil {
 		operation.statements.filter(TypedParameter).toList
 	}
 	
+	def parameters(Endpoint endpoint, Operation operation) {
+		val parameters = endpoint.pathParts.filter(ParameterPath).map[parameter].toList
+		parameters.addAll(operation.parameters)
+		return parameters
+	}
+	
 	def returnTypes(Operation operation) {
 		operation.statements.filter(Return)
 	}
