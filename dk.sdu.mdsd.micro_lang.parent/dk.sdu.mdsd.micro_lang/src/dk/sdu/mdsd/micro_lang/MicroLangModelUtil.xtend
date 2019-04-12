@@ -15,7 +15,7 @@ import dk.sdu.mdsd.micro_lang.microLang.TypedParameter
 import dk.sdu.mdsd.micro_lang.microLang.Uses
 
 /**
- * Extension utility methods for the various classes of the meta model.
+ * Extension utility methods for the various classes of the meta-model.
  */
 class MicroLangModelUtil {
 	
@@ -28,23 +28,28 @@ class MicroLangModelUtil {
 	}
 	
 	def uses(Element element) {
-		element.declarations.filter(Uses).map[target].toList
+		element.declarations.filter(Uses).map[target]
 	}
 	
 	def getImplements(Element element) {
 		element.declarations.filter(Implements)
 	}
 	
-	def Iterable<Endpoint> inheritedEndpoints(Implements implement) {
-		implement.target.endpoints + implement.target.implements.map[inheritedEndpoints].flatten
-	}
-	
 	def endpoints(Element element) {
 		element.declarations.filter(Endpoint)
 	}
 	
+	/**
+	 * Provides an Iterable of the endpoints this 'implements' provides, 
+	 * consisting of the endpoints declared in its target template, as well as 
+	 * any template the target might implement.
+	 */
+	def Iterable<Endpoint> inheritedEndpoints(Implements implement) {
+		implement.target.endpoints + implement.target.implements.map[inheritedEndpoints].flatten
+	}
+	
 	def parameters(Operation operation) {
-		operation.statements.filter(TypedParameter).toList
+		operation.statements.filter(TypedParameter)
 	}
 	
 	def parameters(Endpoint endpoint, Operation operation) {
@@ -67,10 +72,6 @@ class MicroLangModelUtil {
 			}
 				
 		].join('/')
-	}
-	
-	def normalPathParts(Endpoint endpoint) {
-		endpoint.pathParts.filter(NormalPath).toList
 	}
 	
 	def asString(TypedParameter typedParameter) {

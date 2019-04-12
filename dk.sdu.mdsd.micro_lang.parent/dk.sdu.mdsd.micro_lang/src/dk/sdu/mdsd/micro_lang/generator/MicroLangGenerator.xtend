@@ -45,7 +45,6 @@ class MicroLangGenerator extends AbstractGenerator {
 	public static val RES_LIB_DIR = 'src/resources/generator/'
 
 	override void doGenerate(Resource resource, IFileSystemAccess2 fsa, IGeneratorContext context) {
-		//resource.allContents.filter(Implements).forEach[resolve]
 		resource.allContents.filter(Microservice).forEach[generateMicroservice(fsa)]
 		
 		fsa.generateFilesFromDir(RES_LIB_DIR)
@@ -98,33 +97,6 @@ class MicroLangGenerator extends AbstractGenerator {
 		}
 	'''
 	
-	def void resolve(Implements implement) {
-		val args = implement.arguments
-		implement.target.parameters.forEach[parameter, index | 
-			val references = find(parameter, parameter.eContainer)
-			for (ref : references) {
-				ref.EObject.resolve(args.get(index))
-			}
-		]
-		implement.target.implements.forEach[resolve]
-	}
-	
-	def dispatch resolve(NormalPath path, String arg) {
-		path.name = arg
-	}
-	
-	def dispatch resolve(Method method, String arg) {
-		method.name = arg
-	}
-	
-	def dispatch resolve(TypedParameter parameter, String arg) {
-		parameter.name = arg
-	}
-	
-	def dispatch resolve(Type type, String arg) {
-		type.name = arg
-	}
-	
 	def generateAbstractClass(Microservice microservice, String pkg, String name, String interfacePkg, String interfaceName)'''
 		«generateHeader»
 		package «pkg»;
@@ -169,6 +141,28 @@ class MicroLangGenerator extends AbstractGenerator {
 		}
 	'''
 	
+	def generateMethodSignature(Endpoint endpoint, Operation operation)
+		'''«operation.returnType.generateReturn» «endpoint.toMethodName(operation)»«endpoint.parameters(operation).generateParameters»'''
+	
+	def generateParameters(Iterable<TypedParameter> params)
+		'''(«FOR param : params SEPARATOR ', '»«param.type.generateType» _«param.name»«ENDFOR»)'''
+	
+	def generateReturn(Return returnType) {
+		if (returnType === null) {
+			return '''void'''
+		}
+		'''«returnType.type.generateType»'''
+	}
+	
+	def generateType(Type type) {
+		val name = switch type.name {
+			case "string": "String"
+			case "bool": "boolean"
+			default: type.name
+		}
+		name + type.arrays.join
+	}
+	
 	def generateStubMethod(Endpoint endpoint, Operation operation)'''
 		@Override
 		public «endpoint.generateMethodSignature(operation)» {
@@ -192,28 +186,6 @@ class MicroLangGenerator extends AbstractGenerator {
 		}
 	}
 	
-	def generateMethodSignature(Endpoint endpoint, Operation operation)
-		'''«operation.returnType.generateReturn» «endpoint.toMethodName(operation)»«endpoint.parameters(operation).generateParameters»'''
-	
-	def generateParameters(Iterable<TypedParameter> params)
-		'''(«FOR param : params SEPARATOR ', '»«param.type.generateType» _«param.name»«ENDFOR»)'''
-	
-	def generateReturn(Return returnType) {
-		if (returnType === null) {
-			return '''void'''
-		}
-		'''«returnType.type.generateType»'''
-	}
-	
-	def generateType(Type type) {
-		val name = switch type.name {
-			case "string": "String"
-			case "bool": "boolean"
-			default: type.name
-		}
-		name + type.arrays.join
-	}
-	
 	def toFileName(String name) {
 		CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.UPPER_CAMEL, name)
 	}
@@ -227,6 +199,30 @@ class MicroLangGenerator extends AbstractGenerator {
 		val operationName = operation.method.name.toLowerCase
 		pathName = CaseFormat.LOWER_UNDERSCORE.to(CaseFormat.UPPER_CAMEL, pathName)
 		operationName + pathName
+	}
+	
+	def void resolve(Implements implement) {
+		val args = implement.arguments
+		implement.target.parameters.forEach[parameter, index | 
+			find(parameter, parameter.eContainer).forEach[EObject.resolve(args.get(index))]
+		]
+		implement.target.implements.forEach[resolve]
+	}
+	
+	def dispatch resolve(NormalPath path, String arg) {
+		path.name = arg
+	}
+	
+	def dispatch resolve(Method method, String arg) {
+		method.name = arg
+	}
+	
+	def dispatch resolve(TypedParameter parameter, String arg) {
+		parameter.name = arg
+	}
+	
+	def dispatch resolve(Type type, String arg) {
+		type.name = arg
 	}
 	
 	def generateHeader()'''
