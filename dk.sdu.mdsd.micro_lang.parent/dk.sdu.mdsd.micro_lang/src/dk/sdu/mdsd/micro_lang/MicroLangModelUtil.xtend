@@ -35,12 +35,8 @@ class MicroLangModelUtil {
 		element.declarations.filter(Implements)
 	}
 	
-	def implementTargets(Element element) {
-		element.declarations.filter(Implements).map[target].toList
-	}
-	
-	def Iterable<Endpoint> inheritedEndpoints(Element element) {
-		element.implementTargets.map[endpoints].flatten + element.implementTargets.map[inheritedEndpoints].flatten
+	def Iterable<Endpoint> inheritedEndpoints(Implements implement) {
+		implement.target.endpoints + implement.target.implements.map[inheritedEndpoints].flatten
 	}
 	
 	def endpoints(Element element) {

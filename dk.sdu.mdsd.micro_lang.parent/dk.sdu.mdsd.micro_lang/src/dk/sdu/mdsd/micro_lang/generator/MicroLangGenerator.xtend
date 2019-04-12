@@ -82,8 +82,14 @@ class MicroLangGenerator extends AbstractGenerator {
 			
 			«FOR implement : microservice.implements»
 				«implement.resolve»
+				«FOR inheritedEndpoint : implement.inheritedEndpoints»
+					«FOR operation : inheritedEndpoint.operations»
+						«inheritedEndpoint.generateMethodSignature(operation)»;
+						
+					«ENDFOR»
+				«ENDFOR»
 			«ENDFOR»
-			«FOR endpoint : microservice.endpoints + microservice.inheritedEndpoints»
+			«FOR endpoint : microservice.endpoints»
 				«FOR operation : endpoint.operations»
 					«endpoint.generateMethodSignature(operation)»;
 					
@@ -92,7 +98,7 @@ class MicroLangGenerator extends AbstractGenerator {
 		}
 	'''
 	
-	def resolve(Implements implement) {
+	def void resolve(Implements implement) {
 		val args = implement.arguments
 		implement.target.parameters.forEach[parameter, index | 
 			val references = find(parameter, parameter.eContainer)
@@ -100,6 +106,7 @@ class MicroLangGenerator extends AbstractGenerator {
 				ref.EObject.resolve(args.get(index))
 			}
 		]
+		implement.target.implements.forEach[resolve]
 	}
 	
 	def dispatch resolve(NormalPath path, String arg) {
@@ -146,8 +153,14 @@ class MicroLangGenerator extends AbstractGenerator {
 			
 			«FOR implement : microservice.implements»
 				«implement.resolve»
+				«FOR inheritedEndpoint : implement.inheritedEndpoints»
+					«FOR operation : inheritedEndpoint.operations»
+						«inheritedEndpoint.generateMethodSignature(operation)»;
+						
+					«ENDFOR»
+				«ENDFOR»
 			«ENDFOR»
-			«FOR endpoint : microservice.endpoints + microservice.inheritedEndpoints»
+			«FOR endpoint : microservice.endpoints»
 				«FOR operation : endpoint.operations»
 					«endpoint.generateStubMethod(operation)»
 					
