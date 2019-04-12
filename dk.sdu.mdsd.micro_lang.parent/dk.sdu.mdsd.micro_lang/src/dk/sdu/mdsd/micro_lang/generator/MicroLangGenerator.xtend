@@ -9,8 +9,10 @@ import dk.sdu.mdsd.micro_lang.MicroLangModelUtil
 import dk.sdu.mdsd.micro_lang.microLang.Endpoint
 import dk.sdu.mdsd.micro_lang.microLang.Implements
 import dk.sdu.mdsd.micro_lang.microLang.Microservice
+import dk.sdu.mdsd.micro_lang.microLang.NormalPath
 import dk.sdu.mdsd.micro_lang.microLang.Operation
 import dk.sdu.mdsd.micro_lang.microLang.Return
+import dk.sdu.mdsd.micro_lang.microLang.Type
 import dk.sdu.mdsd.micro_lang.microLang.TypedParameter
 import dk.sdu.mdsd.micro_lang.microLang.Uses
 import java.util.List
@@ -18,8 +20,6 @@ import org.eclipse.emf.ecore.resource.Resource
 import org.eclipse.xtext.generator.AbstractGenerator
 import org.eclipse.xtext.generator.IFileSystemAccess2
 import org.eclipse.xtext.generator.IGeneratorContext
-import dk.sdu.mdsd.micro_lang.microLang.Type
-import dk.sdu.mdsd.micro_lang.microLang.NormalPath
 
 /**
  * Generates code from your model files on save.
@@ -147,8 +147,12 @@ class MicroLangGenerator extends AbstractGenerator {
 		if (returnType === null) {
 			return ''''''
 		}
+		if (!returnType.type.arrays.empty) {
+			return '''return null;'''
+		}
 		switch returnType.type.name {
 			case "bool": '''return false;'''
+			case "double", 
 			case "int": '''return 0;'''
 			default: '''return null;'''
 		}
