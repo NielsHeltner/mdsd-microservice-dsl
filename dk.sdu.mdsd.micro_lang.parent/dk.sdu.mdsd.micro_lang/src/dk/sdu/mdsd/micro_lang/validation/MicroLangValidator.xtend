@@ -66,9 +66,6 @@ class MicroLangValidator extends AbstractMicroLangValidator {
 	}
 	
 	def private void checkNoCycleInImplements(Implements implement, Set<EObject> visited) {
-		if (implement === null) {
-			return
-		}
 		if (visited.contains(implement)) {
 			error('Cycle in hierarchy of template "' + implement.target.name + '"', 
 				implement, 
