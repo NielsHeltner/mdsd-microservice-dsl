@@ -99,7 +99,7 @@ Return:
 ;
 
 Type:
-	name=('bool' | 'char' | 'string' | 'int' | 'long' | 'float' | 'double') arrays+=(Array)* | '{' target=[Parameter] '}'
+	name=('bool' | 'string' | 'int' | 'double') arrays+=(Array)* | '{' target=[Parameter] '}'
 ;
 
 Array:
