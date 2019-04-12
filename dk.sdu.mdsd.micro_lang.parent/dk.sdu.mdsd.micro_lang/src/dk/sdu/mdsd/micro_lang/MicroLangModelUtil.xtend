@@ -1,5 +1,6 @@
 package dk.sdu.mdsd.micro_lang
 
+import dk.sdu.mdsd.micro_lang.microLang.Element
 import dk.sdu.mdsd.micro_lang.microLang.Endpoint
 import dk.sdu.mdsd.micro_lang.microLang.Implements
 import dk.sdu.mdsd.micro_lang.microLang.Microservice
@@ -12,8 +13,6 @@ import dk.sdu.mdsd.micro_lang.microLang.Template
 import dk.sdu.mdsd.micro_lang.microLang.Type
 import dk.sdu.mdsd.micro_lang.microLang.TypedParameter
 import dk.sdu.mdsd.micro_lang.microLang.Uses
-import dk.sdu.mdsd.micro_lang.microLang.Element
-import java.util.List
 
 /**
  * Extension utility methods for the various classes of the meta model.
@@ -53,9 +52,7 @@ class MicroLangModelUtil {
 	}
 	
 	def parameters(Endpoint endpoint, Operation operation) {
-		val parameters = endpoint.pathParts.filter(ParameterPath).map[parameter].toList
-		parameters.addAll(operation.parameters)
-		return parameters
+		endpoint.pathParts.filter(ParameterPath).map[parameter] + operation.parameters
 	}
 	
 	def returnTypes(Operation operation) {

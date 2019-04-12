@@ -8,21 +8,19 @@ import com.google.inject.Inject
 import dk.sdu.mdsd.micro_lang.MicroLangModelUtil
 import dk.sdu.mdsd.micro_lang.microLang.Endpoint
 import dk.sdu.mdsd.micro_lang.microLang.Implements
+import dk.sdu.mdsd.micro_lang.microLang.Method
 import dk.sdu.mdsd.micro_lang.microLang.Microservice
 import dk.sdu.mdsd.micro_lang.microLang.NormalPath
 import dk.sdu.mdsd.micro_lang.microLang.Operation
 import dk.sdu.mdsd.micro_lang.microLang.Return
 import dk.sdu.mdsd.micro_lang.microLang.Type
 import dk.sdu.mdsd.micro_lang.microLang.TypedParameter
-import dk.sdu.mdsd.micro_lang.microLang.Uses
-import java.util.List
 import org.eclipse.emf.ecore.resource.Resource
 import org.eclipse.xtext.generator.AbstractGenerator
 import org.eclipse.xtext.generator.IFileSystemAccess2
 import org.eclipse.xtext.generator.IGeneratorContext
 
 import static org.eclipse.emf.ecore.util.EcoreUtil.UsageCrossReferencer.find
-import dk.sdu.mdsd.micro_lang.microLang.Method
 
 /**
  * Generates code from your model files on save.
@@ -47,7 +45,7 @@ class MicroLangGenerator extends AbstractGenerator {
 	public static val RES_LIB_DIR = 'src/resources/generator/'
 
 	override void doGenerate(Resource resource, IFileSystemAccess2 fsa, IGeneratorContext context) {
-		resource.allContents.filter(Implements).forEach[resolve]
+		//resource.allContents.filter(Implements).forEach[resolve]
 		resource.allContents.filter(Microservice).forEach[generateMicroservice(fsa)]
 		
 		fsa.generateFilesFromDir(RES_LIB_DIR)
@@ -82,13 +80,10 @@ class MicroLangGenerator extends AbstractGenerator {
 			String HOST = "«microservice.location.host»";
 			int PORT = «microservice.location.port»;
 			
-			«FOR inheritedEndpoint : microservice.inheritedEndpoints»
-				«FOR operation : inheritedEndpoint.operations»
-					«inheritedEndpoint.generateMethodSignature(operation)»;
-					
-				«ENDFOR»
+			«FOR implement : microservice.implements»
+				«implement.resolve»
 			«ENDFOR»
-			«FOR endpoint : microservice.endpoints»
+			«FOR endpoint : microservice.endpoints + microservice.inheritedEndpoints»
 				«FOR operation : endpoint.operations»
 					«endpoint.generateMethodSignature(operation)»;
 					
@@ -149,13 +144,10 @@ class MicroLangGenerator extends AbstractGenerator {
 		
 		public class «name» extends «abstractName» {
 			
-			«FOR inheritedEndpoint : microservice.inheritedEndpoints»
-				«FOR operation : inheritedEndpoint.operations»
-					«inheritedEndpoint.generateStubMethod(operation)»
-					
-				«ENDFOR»
+			«FOR implement : microservice.implements»
+				«implement.resolve»
 			«ENDFOR»
-			«FOR endpoint : microservice.endpoints»
+			«FOR endpoint : microservice.endpoints + microservice.inheritedEndpoints»
 				«FOR operation : endpoint.operations»
 					«endpoint.generateStubMethod(operation)»
 					
@@ -190,7 +182,7 @@ class MicroLangGenerator extends AbstractGenerator {
 	def generateMethodSignature(Endpoint endpoint, Operation operation)
 		'''«operation.returnType.generateReturn» «endpoint.toMethodName(operation)»«endpoint.parameters(operation).generateParameters»'''
 	
-	def generateParameters(List<TypedParameter> params)
+	def generateParameters(Iterable<TypedParameter> params)
 		'''(«FOR param : params SEPARATOR ', '»«param.type.generateType» _«param.name»«ENDFOR»)'''
 	
 	def generateReturn(Return returnType) {
