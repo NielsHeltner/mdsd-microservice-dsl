@@ -5,6 +5,7 @@ package dk.sdu.mdsd.micro_lang.validation
 
 import com.google.inject.Inject
 import dk.sdu.mdsd.micro_lang.MicroLangModelUtil
+import dk.sdu.mdsd.micro_lang.microLang.Implements
 import dk.sdu.mdsd.micro_lang.microLang.MicroLangPackage
 import dk.sdu.mdsd.micro_lang.microLang.Microservice
 import dk.sdu.mdsd.micro_lang.microLang.NormalPath
@@ -12,10 +13,11 @@ import dk.sdu.mdsd.micro_lang.microLang.Operation
 import dk.sdu.mdsd.micro_lang.microLang.Parameter
 import dk.sdu.mdsd.micro_lang.microLang.Return
 import dk.sdu.mdsd.micro_lang.microLang.Uses
+import java.util.Set
+import org.eclipse.emf.ecore.EObject
 import org.eclipse.xtext.validation.Check
 
 import static org.eclipse.emf.ecore.util.EcoreUtil.UsageCrossReferencer.find
-import dk.sdu.mdsd.micro_lang.microLang.Implements
 
 /**
  * This class contains custom validation rules. 
@@ -27,6 +29,8 @@ class MicroLangValidator extends AbstractMicroLangValidator {
 	protected static val ISSUE_CODE_PREFIX = 'dk.sdu.mdsd.micro_lang.'
 	
 	public static val USES_SELF = ISSUE_CODE_PREFIX + 'UsesSelf'
+	
+	public static val IMPLEMENT_CYCLE = ISSUE_CODE_PREFIX + 'ImplementCycle'
 	
 	public static val UNREACHABLE_CODE = ISSUE_CODE_PREFIX + 'UnreachableCode'
 	
@@ -53,6 +57,28 @@ class MicroLangValidator extends AbstractMicroLangValidator {
 				USES_SELF, 
 				uses.target.name)
 		}
+	}
+	
+	@Check
+	def void checkNoCycleInImplements(Implements implement) {
+		val visited = newHashSet(implement.eContainer)
+		implement.checkNoCycleInImplements(visited)
+	}
+	
+	def private void checkNoCycleInImplements(Implements implement, Set<EObject> visited) {
+		if (implement === null) {
+			return
+		}
+		if (visited.contains(implement)) {
+			error('Cycle in hierarchy of template "' + implement.target.name + '"', 
+				implement, 
+				epackage.implements_Target, 
+				IMPLEMENT_CYCLE, 
+				implement.target.name)
+			return
+		}
+		visited.add(implement)
+		implement.target.implements.forEach[checkNoCycleInImplements(visited)]
 	}
 	
 	@Check

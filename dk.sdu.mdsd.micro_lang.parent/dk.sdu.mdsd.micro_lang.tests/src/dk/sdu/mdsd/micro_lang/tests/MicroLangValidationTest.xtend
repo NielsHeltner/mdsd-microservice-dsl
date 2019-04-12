@@ -33,6 +33,47 @@ class MicroLangValidationTest {
 	}
 	
 	@Test
+	def testCycleSelfInTemplates() {
+		val model = '''
+			template A
+				implements A
+				/path
+					GET
+		'''.parse
+		model.assertError(epackage.implements, MicroLangValidator.IMPLEMENT_CYCLE)
+	}
+	
+	@Test
+	def testCycleSelfAndOtherInTemplates() {
+		val model = '''
+			template A
+				implements A
+				/path
+					GET
+			template B
+				implements A
+				/path
+					POST
+		'''.parse
+		model.assertError(epackage.implements, MicroLangValidator.IMPLEMENT_CYCLE)
+	}
+	
+	@Test
+	def testCycleOtherInTemplates() {
+		val model = '''
+			template A
+				implements B
+				/path
+					GET
+			template B
+				implements A
+				/path
+					POST
+		'''.parse
+		model.assertError(epackage.implements, MicroLangValidator.IMPLEMENT_CYCLE)
+	}
+	
+	@Test
 	def testUnreachableCode() {
 		val model = '''
 			microservice TEST_SERVICE @ localhost:5000
