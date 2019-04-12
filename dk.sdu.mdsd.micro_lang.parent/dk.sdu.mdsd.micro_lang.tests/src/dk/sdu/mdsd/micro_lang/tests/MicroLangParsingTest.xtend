@@ -151,7 +151,7 @@ class MicroLangParsingTest {
 				/login
 					GET
 						string username
-						char[] password
+						string[] password
 		'''.parse
 		model.assertNoErrors
 		val microservice = model.microservices.head
@@ -161,7 +161,7 @@ class MicroLangParsingTest {
 		
 		'string'.assertEquals(operation.parameters.head.type.asString)
 		'username'.assertEquals(operation.parameters.head.name)
-		'char[]'.assertEquals(operation.parameters.last.type.asString)
+		'string[]'.assertEquals(operation.parameters.last.type.asString)
 		'password'.assertEquals(operation.parameters.last.name)
 		assertNull(operation.returnType)
 	}
@@ -217,7 +217,7 @@ class MicroLangParsingTest {
 						
 						return double
 						
-						long number
+						int number
 		'''.parse
 		val microservice = model.microservices.head
 		val operation = microservice.endpoints.head.operations.head
@@ -230,7 +230,7 @@ class MicroLangParsingTest {
 		'int[]'.assertEquals(operation.parameters.head.type.asString)
 		'numbers'.assertEquals(operation.parameters.head.name)
 		'double'.assertEquals(operation.returnTypes.last.type.asString)
-		'long'.assertEquals(operation.parameters.last.type.asString)
+		'int'.assertEquals(operation.parameters.last.type.asString)
 		'number'.assertEquals(operation.parameters.last.name)
 	}
 	
