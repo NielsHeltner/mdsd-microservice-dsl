@@ -13,6 +13,7 @@ import dk.sdu.mdsd.micro_lang.microLang.Type
 import dk.sdu.mdsd.micro_lang.microLang.TypedParameter
 import dk.sdu.mdsd.micro_lang.microLang.Uses
 import dk.sdu.mdsd.micro_lang.microLang.Element
+import java.util.List
 
 /**
  * Extension utility methods for the various classes of the meta model.
@@ -32,11 +33,19 @@ class MicroLangModelUtil {
 	}
 	
 	def getImplements(Element element) {
+		element.declarations.filter(Implements)
+	}
+	
+	def implementTargets(Element element) {
 		element.declarations.filter(Implements).map[target].toList
 	}
 	
+	def Iterable<Endpoint> inheritedEndpoints(Element element) {
+		element.implementTargets.map[endpoints].flatten + element.implementTargets.map[inheritedEndpoints].flatten
+	}
+	
 	def endpoints(Element element) {
-		element.declarations.filter(Endpoint).toList
+		element.declarations.filter(Endpoint)
 	}
 	
 	def parameters(Operation operation) {

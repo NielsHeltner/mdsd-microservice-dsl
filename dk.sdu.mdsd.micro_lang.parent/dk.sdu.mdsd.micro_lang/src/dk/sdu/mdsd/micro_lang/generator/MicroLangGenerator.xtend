@@ -21,6 +21,9 @@ import org.eclipse.xtext.generator.AbstractGenerator
 import org.eclipse.xtext.generator.IFileSystemAccess2
 import org.eclipse.xtext.generator.IGeneratorContext
 
+import static org.eclipse.emf.ecore.util.EcoreUtil.UsageCrossReferencer.find
+import dk.sdu.mdsd.micro_lang.microLang.Method
+
 /**
  * Generates code from your model files on save.
  * 
@@ -44,6 +47,7 @@ class MicroLangGenerator extends AbstractGenerator {
 	public static val RES_LIB_DIR = 'src/resources/generator/'
 
 	override void doGenerate(Resource resource, IFileSystemAccess2 fsa, IGeneratorContext context) {
+		resource.allContents.filter(Implements).forEach[resolve]
 		resource.allContents.filter(Microservice).forEach[generateMicroservice(fsa)]
 		
 		fsa.generateFilesFromDir(RES_LIB_DIR)
@@ -78,11 +82,46 @@ class MicroLangGenerator extends AbstractGenerator {
 			String HOST = "«microservice.location.host»";
 			int PORT = «microservice.location.port»;
 			
-			«FOR declaration : microservice.declarations»
-				«declaration.generateDeclarationInterfaceCode»
+			«FOR inheritedEndpoint : microservice.inheritedEndpoints»
+				«FOR operation : inheritedEndpoint.operations»
+					«inheritedEndpoint.generateMethodSignature(operation)»;
+					
+				«ENDFOR»
+			«ENDFOR»
+			«FOR endpoint : microservice.endpoints»
+				«FOR operation : endpoint.operations»
+					«endpoint.generateMethodSignature(operation)»;
+					
+				«ENDFOR»
 			«ENDFOR»
 		}
 	'''
+	
+	def resolve(Implements implement) {
+		val args = implement.arguments
+		implement.target.parameters.forEach[parameter, index | 
+			val references = find(parameter, parameter.eContainer)
+			for (ref : references) {
+				ref.EObject.resolve(args.get(index))
+			}
+		]
+	}
+	
+	def dispatch resolve(NormalPath path, String arg) {
+		path.name = arg
+	}
+	
+	def dispatch resolve(Method method, String arg) {
+		method.name = arg
+	}
+	
+	def dispatch resolve(TypedParameter parameter, String arg) {
+		parameter.name = arg
+	}
+	
+	def dispatch resolve(Type type, String arg) {
+		type.name = arg
+	}
 	
 	def generateAbstractClass(Microservice microservice, String pkg, String name, String interfacePkg, String interfaceName)'''
 		«generateHeader»
@@ -99,7 +138,6 @@ class MicroLangGenerator extends AbstractGenerator {
 			protected «uses.name.toFileName» «uses.name.toAttributeName»;
 			«ENDFOR»
 			
-			//class impl
 		}
 	'''
 	
@@ -111,6 +149,12 @@ class MicroLangGenerator extends AbstractGenerator {
 		
 		public class «name» extends «abstractName» {
 			
+			«FOR inheritedEndpoint : microservice.inheritedEndpoints»
+				«FOR operation : inheritedEndpoint.operations»
+					«inheritedEndpoint.generateStubMethod(operation)»
+					
+				«ENDFOR»
+			«ENDFOR»
 			«FOR endpoint : microservice.endpoints»
 				«FOR operation : endpoint.operations»
 					«endpoint.generateStubMethod(operation)»
@@ -118,21 +162,6 @@ class MicroLangGenerator extends AbstractGenerator {
 				«ENDFOR»
 			«ENDFOR»
 		}
-	'''
-	
-	def dispatch generateDeclarationInterfaceCode(Uses uses)'''
-		//code for injecting microservice
-	'''
-	
-	def dispatch generateDeclarationInterfaceCode(Implements implement)'''
-		//code for implementing a template
-	'''
-	
-	def dispatch generateDeclarationInterfaceCode(Endpoint endpoint)'''
-		«FOR operation : endpoint.operations»
-			«endpoint.generateMethodSignature(operation)»;
-			
-		«ENDFOR»
 	'''
 	
 	def generateStubMethod(Endpoint endpoint, Operation operation)'''
