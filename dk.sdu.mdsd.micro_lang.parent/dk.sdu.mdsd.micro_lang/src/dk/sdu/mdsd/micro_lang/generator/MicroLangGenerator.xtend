@@ -57,19 +57,23 @@ class MicroLangGenerator extends AbstractGenerator {
 	def generateMicroservice(Microservice microservice, IFileSystemAccess2 fsa) {
 		val interfaceName = microservice.name.toFileName
 		val interfaceDir = GEN_INTERFACE_DIR
-		val interfacePkg = interfaceDir.replaceAll("/", ".").substring(0, interfaceDir.length - 1)
+		val interfacePkg = interfaceDir.toPackage
 		fsa.generateFile(interfaceDir + interfaceName + GEN_FILE_EXT, microservice.generateInterface(interfacePkg, interfaceName))
 		
 		val abstractName = "Abstract" + interfaceName
 		val abstractDir = GEN_ABSTRACT_DIR
-		val abstractPkg = abstractDir.replaceAll("/", ".").substring(0, abstractDir.length - 1)
+		val abstractPkg = abstractDir.toPackage
 		fsa.generateFile(abstractDir + abstractName + GEN_FILE_EXT, microservice.generateAbstractClass(abstractPkg, abstractName, interfacePkg, interfaceName))
 		
 		val className = interfaceName + "Impl"
 		val classDir = SRC_DIR + GEN_STUB_DIR
-		val classPkg = GEN_STUB_DIR.replaceAll("/", ".").substring(0, GEN_STUB_DIR.length - 1)
+		val classPkg = GEN_STUB_DIR.toPackage
 		fsa.generateFileIfAbsent(classDir + className + GEN_FILE_EXT, microservice.generateStubClass(classPkg, className, abstractPkg, abstractName))
 		fsa.setFilesAsNotDerived(classDir)
+	}
+	
+	def toPackage(String dir) {
+		dir.replaceAll("/", ".").substring(0, dir.length - 1)
 	}
 	
 	def generateInterface(Microservice microservice, String pkg, String name)'''

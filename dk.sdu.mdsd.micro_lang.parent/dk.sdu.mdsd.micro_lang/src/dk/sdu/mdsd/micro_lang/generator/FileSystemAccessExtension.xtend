@@ -2,15 +2,20 @@ package dk.sdu.mdsd.micro_lang.generator
 
 import java.io.File
 import java.io.FileInputStream
+import java.util.List
 import org.eclipse.core.resources.IFolder
 import org.eclipse.core.resources.ResourcesPlugin
 import org.eclipse.core.runtime.FileLocator
+import org.eclipse.core.runtime.IPath
+import org.eclipse.core.runtime.Path
+import org.eclipse.jdt.core.IClasspathEntry
 import org.eclipse.jdt.core.JavaCore
 import org.eclipse.xtext.generator.IFileSystemAccess2
 
 import static org.eclipse.core.resources.IResource.FILE
 import static org.eclipse.core.resources.IResource.FOLDER
-import org.eclipse.core.runtime.Path
+
+import static extension org.eclipse.jdt.core.IClasspathEntry.*
 
 class FileSystemAccessExtension {
 	
@@ -56,29 +61,30 @@ class FileSystemAccessExtension {
 		}
 	}
 	
-	def fixJreInClassPath(IFileSystemAccess2 fsa) {
+	def changeClassPath(IFileSystemAccess2 fsa, (IPath, List<IClasspathEntry>) => IClasspathEntry entrySupplier) {
 		val project = ResourcesPlugin.workspace.root.findMember(fsa.getURI('').toPlatformString(true)).project
 		JavaCore.create(project) => [
 			val classPathEntries = newArrayList(rawClasspath)
-			classPathEntries.remove(classPathEntries.findFirst[entryKind == it.CPE_CONTAINER])
 			
-			val jreEntry = JavaCore.newContainerEntry(new Path("org.eclipse.jdt.launching.JRE_CONTAINER"))
-			if (!classPathEntries.contains(jreEntry)) {
-				classPathEntries.add(jreEntry)
+			val newEntry = entrySupplier.apply(path, classPathEntries)
+			
+			if (!classPathEntries.contains(newEntry)) {
+				classPathEntries.add(newEntry)
 				setRawClasspath(classPathEntries, null)
 			}
 		]
 	}
 	
+	def fixJreInClassPath(IFileSystemAccess2 fsa) {
+		fsa.changeClassPath[path, classPathEntries | 
+			classPathEntries.remove(classPathEntries.findFirst[entryKind == it.CPE_CONTAINER])
+			JavaCore.newContainerEntry(new Path("org.eclipse.jdt.launching.JRE_CONTAINER"))
+		]
+	}
+	
 	def addSrcGenToClassPath(IFileSystemAccess2 fsa) {
-		val project = ResourcesPlugin.workspace.root.findMember(fsa.getURI('').toPlatformString(true)).project
-		JavaCore.create(project) => [
-			val srcGenEntry = JavaCore.newSourceEntry(path.append("src-gen"), null)
-			val classPathEntries = newArrayList(rawClasspath)
-			if (!classPathEntries.contains(srcGenEntry)) {
-				classPathEntries.add(srcGenEntry)
-				setRawClasspath(classPathEntries, null)
-			}
+		fsa.changeClassPath[path, classPathEntries | 
+			JavaCore.newSourceEntry(path.append("src-gen"), null)
 		]
 	}
 	
