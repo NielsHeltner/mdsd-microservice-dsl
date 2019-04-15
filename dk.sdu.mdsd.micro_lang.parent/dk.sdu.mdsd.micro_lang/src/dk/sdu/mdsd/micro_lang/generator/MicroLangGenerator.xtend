@@ -154,7 +154,7 @@ class MicroLangGenerator extends AbstractGenerator {
 				String path = request.getStartLine().getUri().getPath();
 				«FOR endpoint : microservice.endpoints»
 					«FOR operation : endpoint.operations»
-						if («endpoint.toRegex(operation)») {
+						if (true) {
 							«endpoint.generateMethodCall(operation)»
 						}
 						
@@ -170,9 +170,10 @@ class MicroLangGenerator extends AbstractGenerator {
 		package «pkg»;
 		
 		import «implPkg».«implName»;
-		import io.undertow.Undertow;
-		
-		import static io.undertow.Handlers.pathTemplate;
+		import java.io.OutputStream;
+		import java.io.IOException;
+		import java.net.InetSocketAddress;
+		import com.sun.net.httpserver.HttpServer;
 		
 		public class «name» implements Runnable {
 			
@@ -180,9 +181,10 @@ class MicroLangGenerator extends AbstractGenerator {
 			
 			@Override
 			public void run() {
-				Undertow server = Undertow.builder()
-					.addHttpListener(«implName».PORT, «implName».HOST)
-					.setHandler(pathTemplate()
+				try {
+					HttpServer server = HttpServer.create(new InetSocketAddress(«implName».PORT), 0);
+					server.createContext("/", exchange -> {
+						String path = exchange.getRequestURI().getPath();
 						«FOR implement : microservice.implements»
 							«implement.resolve»
 							«FOR inheritedEndpoint : implement.inheritedEndpoints»
@@ -192,8 +194,17 @@ class MicroLangGenerator extends AbstractGenerator {
 						«FOR endpoint : microservice.endpoints»
 							«endpoint.generateServerMethod»
 						«ENDFOR»
-					).build();
-				server.start();
+						String response = "Hello from «name» at url " + exchange.getRequestURI();
+						exchange.sendResponseHeaders(200, response.length());
+						OutputStream os = exchange.getResponseBody();
+						os.write(response.getBytes());
+						os.close();
+					});
+					server.start();
+				}
+				catch (IOException e) {
+					e.printStackTrace();
+				}
 			}
 			
 			public static void main(String[] args) {
@@ -204,33 +215,30 @@ class MicroLangGenerator extends AbstractGenerator {
 	'''
 	
 	def generateServerMethod(Endpoint endpoint)'''
-		.add("«endpoint.pathAsTemplate»", (exchange) -> {
-			switch (exchange.getRequestMethod().toString()) {
-				case "GET":
-					exchange.getResponseSender().send("Hello from GET «endpoint.pathAsTemplate»");
-					break;
-				case "POST":
-					exchange.getResponseSender().send("Hello from POST «endpoint.pathAsTemplate»");
-					break;
-				default:
-					//illegal method
-					break;
-			}
-		})
+		if (path.matches("«endpoint.generateRegex»")) {
+			//.generateMethodCall
+			System.out.println("«endpoint.path» was true");
+		}
 	'''
 	
-	def pathAsTemplate(Endpoint endpoint) {
-		endpoint.pathParts.map[
+	def generateRegex(Endpoint endpoint) {
+		'\\\\/' + endpoint.pathParts.map[
 			switch it {
 				NormalPath: name
-				ParameterPath: '{' + parameter.name + '}'
+				ParameterPath: parameter.type.generateRegex
 			}
 				
-		].join('/')
+		].join('\\\\/')
 	}
 	
-	def toRegex(Endpoint endpoint, Operation operation)
-	'''true'''
+	def generateRegex(Type type) {
+		switch type.name {
+			case "bool": '''(true|false)'''
+			case "string": '''(?!(true|false)\\b)\\b\\w+'''
+			case "int": '''\\d+'''
+			case "double": '''[0-9]+(\\.[0-9]+)'''
+		}
+	}
 	
 	def generateMethodCall(Endpoint endpoint, Operation operation) {
 		val paramToIndex = endpoint.pathParts.filter(ParameterPath).toMap([parameter], [endpoint.pathParts.indexOf(it)])
