@@ -48,6 +48,7 @@ public class HttpUtil {
 	
 	public void sendResponse(HttpExchange exchange, int code, String response) {
 		try {
+			System.out.println(response);
 			exchange.sendResponseHeaders(code, response.length());
 			OutputStream os = exchange.getResponseBody();
 			os.write(response.getBytes());
@@ -56,6 +57,10 @@ public class HttpUtil {
 		catch (IOException e) {
 			e.printStackTrace();
 		}
+	}
+	
+	public void sendResponse(HttpExchange exchange, int code) {
+		sendResponse(exchange, code, "");
 	}
 	
 

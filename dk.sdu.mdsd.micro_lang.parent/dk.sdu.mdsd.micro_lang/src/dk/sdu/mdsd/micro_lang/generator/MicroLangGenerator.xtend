@@ -145,8 +145,7 @@ class MicroLangGenerator extends AbstractGenerator {
 							«endpoint.generateServerMethod»
 						«ENDFOR»
 						else {
-							//no paths matched
-							System.out.println("no paths matched");
+							util.sendResponse(exchange, 404, path + " could not be found");
 						}
 					});
 					server.start();
@@ -201,8 +200,7 @@ class MicroLangGenerator extends AbstractGenerator {
 					}
 				«ENDFOR»
 				default:
-					//no method matched
-					System.out.println("no method matched");
+					util.sendResponse(exchange, 405, method + " is not implemented on " + path);
 			}
 		}
 	'''
