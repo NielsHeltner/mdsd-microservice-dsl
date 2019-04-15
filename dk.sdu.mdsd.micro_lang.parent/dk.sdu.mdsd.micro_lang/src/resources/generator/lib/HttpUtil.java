@@ -5,9 +5,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import com.sun.net.httpserver.HttpExchange;
 
@@ -26,10 +25,15 @@ public class HttpUtil {
      * @return
      */
     public Map<String, Object> toMap(String parameters) {
-        return Arrays.stream(parameters.split(parameterSeparator))
-        	.map(parameter -> parameter.split(keyValueSeparator))
-        	.collect(Collectors
-			.toMap(param -> param[0], param -> param[1]));
+    	Map<String, Object> result = new HashMap();
+        if (!parameters.isEmpty()) {
+            String[] parameterList = parameters.split(parameterSeparator);
+            for (String parameter : parameterList) {
+                String[] keyAndValue = parameter.split(keyValueSeparator);
+                result.put(keyAndValue[0], keyAndValue[1]);
+            }
+        }
+        return result;
     }
 	
 	public String getBody(InputStream bodyStream) {
