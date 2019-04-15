@@ -206,14 +206,17 @@ class MicroLangGenerator extends AbstractGenerator {
 		val paramToIndex = endpoint.pathParts.filter(ParameterPath).toMap([parameter], [endpoint.pathParts.indexOf(it) + 1])
 		'''
 			«FOR entry : paramToIndex.entrySet»
-				«entry.key.type.generateType» «entry.key.name» = «entry.key.type.generateBoxedType».valueOf(path.split("/")[«entry.value»]);
+				«entry.key.generateVariableAssignment('''path.split("/")[«entry.value»]''')»
 			«ENDFOR»
 			«FOR param : operation.parameters»
-				«param.type.generateType» «param.name» = «param.type.generateBoxedType».valueOf(parameters.get("«param.name»"));
+				«param.generateVariableAssignment('''parameters.get("«param.name»")''')»
 			«ENDFOR»
 			«endpoint.toMethodName(operation)»«(paramToIndex.keySet + operation.parameters).generateArguments»;
 		'''
 	}
+	
+	def generateVariableAssignment(TypedParameter param, CharSequence value)
+		'''«param.type.generateType» «param.name» = «param.type.generateBoxedType».valueOf(«value»);'''
 	
 	def generateMethodSignature(Endpoint endpoint, Operation operation)
 		'''«operation.returnType.generateReturn» «endpoint.toMethodName(operation)»«endpoint.parameters(operation).generateParameters»'''
