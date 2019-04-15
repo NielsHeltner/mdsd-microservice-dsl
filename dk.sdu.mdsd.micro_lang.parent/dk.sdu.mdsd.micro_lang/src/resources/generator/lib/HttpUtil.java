@@ -25,7 +25,7 @@ public class HttpUtil {
      * @return
      */
     public Map<String, Object> toMap(String parameters) {
-    	Map<String, Object> result = new HashMap();
+    	Map<String, Object> result = new HashMap<>();
         if (!parameters.isEmpty()) {
             String[] parameterList = parameters.split(parameterSeparator);
             for (String parameter : parameterList) {

@@ -12,6 +12,7 @@ import dk.sdu.mdsd.micro_lang.microLang.Method
 import dk.sdu.mdsd.micro_lang.microLang.Microservice
 import dk.sdu.mdsd.micro_lang.microLang.NormalPath
 import dk.sdu.mdsd.micro_lang.microLang.Operation
+import dk.sdu.mdsd.micro_lang.microLang.ParameterPath
 import dk.sdu.mdsd.micro_lang.microLang.Return
 import dk.sdu.mdsd.micro_lang.microLang.Type
 import dk.sdu.mdsd.micro_lang.microLang.TypedParameter
@@ -19,12 +20,8 @@ import org.eclipse.emf.ecore.resource.Resource
 import org.eclipse.xtext.generator.AbstractGenerator
 import org.eclipse.xtext.generator.IFileSystemAccess2
 import org.eclipse.xtext.generator.IGeneratorContext
-import com.sun.net.httpserver.HttpHandler
 
 import static org.eclipse.emf.ecore.util.EcoreUtil.UsageCrossReferencer.find
-import dk.sdu.mdsd.micro_lang.microLang.ParameterPath
-import java.util.ArrayList
-import java.util.List
 
 /**
  * Generates code from your model files on save.
@@ -84,21 +81,7 @@ class MicroLangGenerator extends AbstractGenerator {
 			String HOST = "«microservice.location.host»";
 			int PORT = «microservice.location.port»;
 			
-			«FOR implement : microservice.implements»
-				«implement.resolve»
-				«FOR inheritedEndpoint : implement.inheritedEndpoints»
-					«FOR operation : inheritedEndpoint.operations»
-						«inheritedEndpoint.generateMethodSignature(operation)»;
-						
-					«ENDFOR»
-				«ENDFOR»
-			«ENDFOR»
-			«FOR endpoint : microservice.endpoints»
-				«FOR operation : endpoint.operations»
-					«endpoint.generateMethodSignature(operation)»;
-					
-				«ENDFOR»
-			«ENDFOR»
+			«microservice.generateMethods[endpoint, operation | endpoint.generateMethodSignature(operation) + ';']»
 		}
 	'''
 	
@@ -132,18 +115,10 @@ class MicroLangGenerator extends AbstractGenerator {
 						String method = exchange.getRequestMethod();
 						System.out.println(method + " " + path);
 						String body = util.getBody(exchange.getRequestBody());
-						System.out.println(body);
+						System.out.println("body: " + body);
 						Map<String, Object> parameters = util.toMap(body);
-						System.out.println(parameters);
-						«FOR implement : microservice.implements»
-							«implement.resolve»
-							«FOR inheritedEndpoint : implement.inheritedEndpoints»
-								«inheritedEndpoint.generateServerMethod»
-							«ENDFOR»
-						«ENDFOR»
-						«FOR endpoint : microservice.endpoints»
-							«endpoint.generateServerMethod»
-						«ENDFOR»
+						System.out.println("parameters: " + parameters);
+						«microservice.generateMethods[endpoint, operation | endpoint.generateServerMethod]»
 						else {
 							util.sendResponse(exchange, 404, path + " could not be found");
 						}
@@ -166,26 +141,30 @@ class MicroLangGenerator extends AbstractGenerator {
 		
 		public class «name» extends «abstractName» {
 			
-			«FOR implement : microservice.implements»
-				«implement.resolve»
-				«FOR inheritedEndpoint : implement.inheritedEndpoints»
-					«FOR operation : inheritedEndpoint.operations»
-						«inheritedEndpoint.generateMethodSignature(operation)»;
-						
-					«ENDFOR»
-				«ENDFOR»
-			«ENDFOR»
-			«FOR endpoint : microservice.endpoints»
-				«FOR operation : endpoint.operations»
-					«endpoint.generateStubMethod(operation)»
-					
-				«ENDFOR»
-			«ENDFOR»
+			«microservice.generateMethods[endpoint, operation | endpoint.generateStubMethod(operation)]»
 			public static void main(String[] args) {
 				new «name»().run();
 			}
 		
 		}
+	'''
+	
+	def generateMethods(Microservice microservice, (Endpoint, Operation) => CharSequence generator)'''
+		«FOR implement : microservice.implements»
+			«implement.resolve»
+			«FOR inheritedEndpoint : implement.inheritedEndpoints»
+				«FOR operation : inheritedEndpoint.operations»
+					«generator.apply(inheritedEndpoint, operation)»
+					
+				«ENDFOR»
+			«ENDFOR»
+		«ENDFOR»
+		«FOR endpoint : microservice.endpoints»
+			«FOR operation : endpoint.operations»
+				«generator.apply(endpoint, operation)»
+				
+			«ENDFOR»
+		«ENDFOR»
 	'''
 	
 	def generateServerMethod(Endpoint endpoint)'''
@@ -196,7 +175,7 @@ class MicroLangGenerator extends AbstractGenerator {
 					case "«operation.method.name»": {
 						«endpoint.generateMethodCall(operation)»
 						util.sendResponse(exchange, 200, "Hello from «endpoint.path»");
-						break;
+						return;
 					}
 				«ENDFOR»
 				default:
@@ -232,7 +211,7 @@ class MicroLangGenerator extends AbstractGenerator {
 			«FOR param : operation.parameters»
 				«param.type.generateType» «param.name» = «param.type.generateBoxedType».valueOf(parameters.get("«param.name»"));
 			«ENDFOR»
-			«endpoint.toMethodName(operation)»(«FOR param : paramToIndex.keySet + operation.parameters SEPARATOR ', '»«param.name»«ENDFOR»);
+			«endpoint.toMethodName(operation)»«(paramToIndex.keySet + operation.parameters).generateArguments»;
 		'''
 	}
 	
@@ -241,6 +220,9 @@ class MicroLangGenerator extends AbstractGenerator {
 	
 	def generateParameters(Iterable<TypedParameter> params)
 		'''(«FOR param : params SEPARATOR ', '»«param.type.generateType» _«param.name»«ENDFOR»)'''
+	
+	def generateArguments(Iterable<TypedParameter> params)
+		'''(«FOR param : params SEPARATOR ', '»«param.name»«ENDFOR»)'''
 	
 	def generateReturn(Return returnType) {
 		if (returnType === null) {
