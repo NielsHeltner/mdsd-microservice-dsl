@@ -10,6 +10,7 @@ import org.eclipse.xtext.generator.IFileSystemAccess2
 
 import static org.eclipse.core.resources.IResource.FILE
 import static org.eclipse.core.resources.IResource.FOLDER
+import org.eclipse.core.runtime.Path
 
 class FileSystemAccessExtension {
 	
@@ -53,6 +54,20 @@ class FileSystemAccessExtension {
 				case FOLDER: fsa.setFilesAsNotDerived(resource.projectRelativePath.toOSString)
 			}
 		}
+	}
+	
+	def fixJreInClassPath(IFileSystemAccess2 fsa) {
+		val project = ResourcesPlugin.workspace.root.findMember(fsa.getURI('').toPlatformString(true)).project
+		JavaCore.create(project) => [
+			val classPathEntries = newArrayList(rawClasspath)
+			classPathEntries.remove(classPathEntries.findFirst[entryKind == it.CPE_CONTAINER])
+			
+			val jreEntry = JavaCore.newContainerEntry(new Path("org.eclipse.jdt.launching.JRE_CONTAINER"))
+			if (!classPathEntries.contains(jreEntry)) {
+				classPathEntries.add(jreEntry)
+				setRawClasspath(classPathEntries, null)
+			}
+		]
 	}
 	
 	def addSrcGenToClassPath(IFileSystemAccess2 fsa) {

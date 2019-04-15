@@ -19,8 +19,12 @@ import org.eclipse.emf.ecore.resource.Resource
 import org.eclipse.xtext.generator.AbstractGenerator
 import org.eclipse.xtext.generator.IFileSystemAccess2
 import org.eclipse.xtext.generator.IGeneratorContext
+import com.sun.net.httpserver.HttpHandler
 
 import static org.eclipse.emf.ecore.util.EcoreUtil.UsageCrossReferencer.find
+import dk.sdu.mdsd.micro_lang.microLang.ParameterPath
+import java.util.ArrayList
+import java.util.List
 
 /**
  * Generates code from your model files on save.
@@ -39,6 +43,7 @@ class MicroLangGenerator extends AbstractGenerator {
 	
 	public static val GEN_INTERFACE_DIR = "microservices/"
 	public static val GEN_ABSTRACT_DIR = GEN_INTERFACE_DIR + "abstr/"
+	public static val GEN_SERVER_DIR = GEN_INTERFACE_DIR + "server/"
 	public static val SRC_DIR = "../src/"
 	public static val GEN_STUB_DIR = "impl/"
 	
@@ -50,6 +55,7 @@ class MicroLangGenerator extends AbstractGenerator {
 		fsa.generateFilesFromDir(RES_LIB_DIR)
 		
 		fsa.addSrcGenToClassPath
+		fsa.fixJreInClassPath
 	}
 	
 	def generateMicroservice(Microservice microservice, IFileSystemAccess2 fsa) {
@@ -68,6 +74,11 @@ class MicroLangGenerator extends AbstractGenerator {
 		val classPkg = GEN_STUB_DIR.replaceAll("/", ".").substring(0, GEN_STUB_DIR.length - 1)
 		fsa.generateFileIfAbsent(classDir + className + GEN_FILE_EXT, microservice.generateStubClass(classPkg, className, abstractPkg, abstractName))
 		fsa.setFilesAsNotDerived(classDir)
+		
+		val serverName = interfaceName + "Server"
+		val serverDir = GEN_SERVER_DIR
+		val serverPkg = serverDir.replaceAll("/", ".").substring(0, serverDir.length - 1)
+		fsa.generateFile(serverDir + serverName + GEN_FILE_EXT, microservice.generateServerClass(serverPkg, serverName, classPkg, className))
 	}
 	
 	def generateInterface(Microservice microservice, String pkg, String name)'''
@@ -138,8 +149,99 @@ class MicroLangGenerator extends AbstractGenerator {
 					
 				«ENDFOR»
 			«ENDFOR»
+		
+			public void invoke(RawHttpRequest request) {
+				String path = request.getStartLine().getUri().getPath();
+				«FOR endpoint : microservice.endpoints»
+					«FOR operation : endpoint.operations»
+						if («endpoint.toRegex(operation)») {
+							«endpoint.generateMethodCall(operation)»
+						}
+						
+					«ENDFOR»
+				«ENDFOR»
+			}
+		
 		}
 	'''
+	
+	def generateServerClass(Microservice microservice, String pkg, String name, String implPkg, String implName)'''
+		«generateHeader»
+		package «pkg»;
+		
+		import «implPkg».«implName»;
+		import io.undertow.Undertow;
+		
+		import static io.undertow.Handlers.pathTemplate;
+		
+		public class «name» implements Runnable {
+			
+			private «implName» «implName.toAttributeName» = new «implName»();
+			
+			@Override
+			public void run() {
+				Undertow server = Undertow.builder()
+					.addHttpListener(«implName».PORT, «implName».HOST)
+					.setHandler(pathTemplate()
+						«FOR implement : microservice.implements»
+							«implement.resolve»
+							«FOR inheritedEndpoint : implement.inheritedEndpoints»
+								«inheritedEndpoint.generateServerMethod»
+							«ENDFOR»
+						«ENDFOR»
+						«FOR endpoint : microservice.endpoints»
+							«endpoint.generateServerMethod»
+						«ENDFOR»
+					).build();
+				server.start();
+			}
+			
+			public static void main(String[] args) {
+				new «name»().run();
+			}
+		
+		}
+	'''
+	
+	def generateServerMethod(Endpoint endpoint)'''
+		.add("«endpoint.pathAsTemplate»", (exchange) -> {
+			switch (exchange.getRequestMethod().toString()) {
+				case "GET":
+					exchange.getResponseSender().send("Hello from GET «endpoint.pathAsTemplate»");
+					break;
+				case "POST":
+					exchange.getResponseSender().send("Hello from POST «endpoint.pathAsTemplate»");
+					break;
+				default:
+					//illegal method
+					break;
+			}
+		})
+	'''
+	
+	def pathAsTemplate(Endpoint endpoint) {
+		endpoint.pathParts.map[
+			switch it {
+				NormalPath: name
+				ParameterPath: '{' + parameter.name + '}'
+			}
+				
+		].join('/')
+	}
+	
+	def toRegex(Endpoint endpoint, Operation operation)
+	'''true'''
+	
+	def generateMethodCall(Endpoint endpoint, Operation operation) {
+		val paramToIndex = endpoint.pathParts.filter(ParameterPath).toMap([parameter], [endpoint.pathParts.indexOf(it)])
+		'''
+			«FOR entry : paramToIndex.entrySet»
+				«entry.key.type.generateType» «entry.key.name» = path.split("/").get(«entry.value»);
+			«ENDFOR»
+			«endpoint.toMethodName(operation)»(«FOR param : paramToIndex.keySet SEPARATOR ', '»«param.name»«ENDFOR»);
+		'''
+	
+	}
 	
 	def generateMethodSignature(Endpoint endpoint, Operation operation)
 		'''«operation.returnType.generateReturn» «endpoint.toMethodName(operation)»«endpoint.parameters(operation).generateParameters»'''
