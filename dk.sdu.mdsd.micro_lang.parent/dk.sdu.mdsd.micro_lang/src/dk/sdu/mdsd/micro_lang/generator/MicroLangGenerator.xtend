@@ -43,7 +43,6 @@ class MicroLangGenerator extends AbstractGenerator {
 	
 	public static val GEN_INTERFACE_DIR = "microservices/"
 	public static val GEN_ABSTRACT_DIR = GEN_INTERFACE_DIR + "abstr/"
-	public static val GEN_SERVER_DIR = GEN_INTERFACE_DIR + "server/"
 	public static val SRC_DIR = "../src/"
 	public static val GEN_STUB_DIR = "impl/"
 	
@@ -74,11 +73,6 @@ class MicroLangGenerator extends AbstractGenerator {
 		val classPkg = GEN_STUB_DIR.replaceAll("/", ".").substring(0, GEN_STUB_DIR.length - 1)
 		fsa.generateFileIfAbsent(classDir + className + GEN_FILE_EXT, microservice.generateStubClass(classPkg, className, abstractPkg, abstractName))
 		fsa.setFilesAsNotDerived(classDir)
-		
-		val serverName = interfaceName + "Server"
-		val serverDir = GEN_SERVER_DIR
-		val serverPkg = serverDir.replaceAll("/", ".").substring(0, serverDir.length - 1)
-		fsa.generateFile(serverDir + serverName + GEN_FILE_EXT, microservice.generateServerClass(serverPkg, serverName, classPkg, className))
 	}
 	
 	def generateInterface(Microservice microservice, String pkg, String name)'''
@@ -116,13 +110,50 @@ class MicroLangGenerator extends AbstractGenerator {
 		«FOR uses : microservice.uses»
 		import «interfacePkg».«uses.name.toFileName»;
 		«ENDFOR»
+		import java.io.OutputStream;
+		import java.io.IOException;
+		import java.net.InetSocketAddress;
+		import com.sun.net.httpserver.HttpServer;
 		
-		public abstract class «name» implements «interfaceName» {
+		public abstract class «name» implements «interfaceName», Runnable {
 			
 			«FOR uses : microservice.uses»
 			protected «uses.name.toFileName» «uses.name.toAttributeName»;
 			«ENDFOR»
 			
+			@Override
+			public void run() {
+				try {
+					HttpServer server = HttpServer.create(new InetSocketAddress(PORT), 0);
+					server.createContext("/", exchange -> {
+						String path = exchange.getRequestURI().getPath();
+						String method = exchange.getRequestMethod();
+						«FOR implement : microservice.implements»
+							«implement.resolve»
+							«FOR inheritedEndpoint : implement.inheritedEndpoints»
+								«inheritedEndpoint.generateServerMethod»
+							«ENDFOR»
+						«ENDFOR»
+						«FOR endpoint : microservice.endpoints»
+							«endpoint.generateServerMethod»
+						«ENDFOR»
+						else {
+							//no paths matched
+							System.out.println("no paths matched");
+						}
+						String response = "Hello from «name» at url " + exchange.getRequestURI();
+						exchange.sendResponseHeaders(200, response.length());
+						OutputStream os = exchange.getResponseBody();
+						os.write(response.getBytes());
+						os.close();
+					});
+					server.start();
+				}
+				catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		
 		}
 	'''
 	
@@ -149,63 +180,6 @@ class MicroLangGenerator extends AbstractGenerator {
 					
 				«ENDFOR»
 			«ENDFOR»
-		
-			public void invoke(RawHttpRequest request) {
-				String path = request.getStartLine().getUri().getPath();
-				«FOR endpoint : microservice.endpoints»
-					«FOR operation : endpoint.operations»
-						if (true) {
-							«endpoint.generateMethodCall(operation)»
-						}
-						
-					«ENDFOR»
-				«ENDFOR»
-			}
-		
-		}
-	'''
-	
-	def generateServerClass(Microservice microservice, String pkg, String name, String implPkg, String implName)'''
-		«generateHeader»
-		package «pkg»;
-		
-		import «implPkg».«implName»;
-		import java.io.OutputStream;
-		import java.io.IOException;
-		import java.net.InetSocketAddress;
-		import com.sun.net.httpserver.HttpServer;
-		
-		public class «name» implements Runnable {
-			
-			private «implName» «implName.toAttributeName» = new «implName»();
-			
-			@Override
-			public void run() {
-				try {
-					HttpServer server = HttpServer.create(new InetSocketAddress(«implName».PORT), 0);
-					server.createContext("/", exchange -> {
-						String path = exchange.getRequestURI().getPath();
-						«FOR implement : microservice.implements»
-							«implement.resolve»
-							«FOR inheritedEndpoint : implement.inheritedEndpoints»
-								«inheritedEndpoint.generateServerMethod»
-							«ENDFOR»
-						«ENDFOR»
-						«FOR endpoint : microservice.endpoints»
-							«endpoint.generateServerMethod»
-						«ENDFOR»
-						String response = "Hello from «name» at url " + exchange.getRequestURI();
-						exchange.sendResponseHeaders(200, response.length());
-						OutputStream os = exchange.getResponseBody();
-						os.write(response.getBytes());
-						os.close();
-					});
-					server.start();
-				}
-				catch (IOException e) {
-					e.printStackTrace();
-				}
-			}
 			
 			public static void main(String[] args) {
 				new «name»().run();
@@ -216,8 +190,17 @@ class MicroLangGenerator extends AbstractGenerator {
 	
 	def generateServerMethod(Endpoint endpoint)'''
 		if (path.matches("«endpoint.generateRegex»")) {
-			//.generateMethodCall
 			System.out.println("«endpoint.path» was true");
+			switch (method) {
+				«FOR operation : endpoint.operations»
+					case "«operation.method.name»":
+						«endpoint.generateMethodCall(operation)»
+						break;
+				«ENDFOR»
+				default:
+					//no method matched
+					System.out.println("no method matched");
+			}
 		}
 	'''
 	
@@ -227,7 +210,6 @@ class MicroLangGenerator extends AbstractGenerator {
 				NormalPath: name
 				ParameterPath: parameter.type.generateRegex
 			}
-				
 		].join('\\\\/')
 	}
 	
@@ -244,11 +226,10 @@ class MicroLangGenerator extends AbstractGenerator {
 		val paramToIndex = endpoint.pathParts.filter(ParameterPath).toMap([parameter], [endpoint.pathParts.indexOf(it)])
 		'''
 			«FOR entry : paramToIndex.entrySet»
-				«entry.key.type.generateType» «entry.key.name» = path.split("/").get(«entry.value»);
+				«entry.key.type.generateType» «entry.key.name» = «entry.key.type.generateBoxedType».valueOf(path.split("/")[«entry.value»]);
 			«ENDFOR»
 			«endpoint.toMethodName(operation)»(«FOR param : paramToIndex.keySet SEPARATOR ', '»«param.name»«ENDFOR»);
 		'''
-	
 	}
 	
 	def generateMethodSignature(Endpoint endpoint, Operation operation)
@@ -271,6 +252,15 @@ class MicroLangGenerator extends AbstractGenerator {
 			default: type.name
 		}
 		name + type.arrays.join
+	}
+	
+	def generateBoxedType(Type type) {
+		val name = switch type.name {
+			case "int": "Integer"
+			case "bool": "Boolean"
+			default: type.name
+		}
+		name.toFirstUpper
 	}
 	
 	def generateStubMethod(Endpoint endpoint, Operation operation)'''
