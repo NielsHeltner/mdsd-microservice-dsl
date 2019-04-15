@@ -110,24 +110,31 @@ class MicroLangGenerator extends AbstractGenerator {
 		«FOR uses : microservice.uses»
 		import «interfacePkg».«uses.name.toFileName»;
 		«ENDFOR»
-		import java.io.OutputStream;
+		import lib.HttpUtil;
+		import java.util.Map;
 		import java.io.IOException;
 		import java.net.InetSocketAddress;
 		import com.sun.net.httpserver.HttpServer;
 		
 		public abstract class «name» implements «interfaceName», Runnable {
 			
+			protected HttpUtil util = new HttpUtil();
 			«FOR uses : microservice.uses»
 			protected «uses.name.toFileName» «uses.name.toAttributeName»;
 			«ENDFOR»
 			
 			@Override
-			public void run() {
+			public final void run() {
 				try {
 					HttpServer server = HttpServer.create(new InetSocketAddress(PORT), 0);
 					server.createContext("/", exchange -> {
 						String path = exchange.getRequestURI().getPath();
 						String method = exchange.getRequestMethod();
+						System.out.println(method + " " + path);
+						String body = util.getBody(exchange.getRequestBody());
+						System.out.println(body);
+						Map<String, Object> parameters = util.toMap(body);
+						System.out.println(parameters);
 						«FOR implement : microservice.implements»
 							«implement.resolve»
 							«FOR inheritedEndpoint : implement.inheritedEndpoints»
@@ -141,11 +148,6 @@ class MicroLangGenerator extends AbstractGenerator {
 							//no paths matched
 							System.out.println("no paths matched");
 						}
-						String response = "Hello from «name» at url " + exchange.getRequestURI();
-						exchange.sendResponseHeaders(200, response.length());
-						OutputStream os = exchange.getResponseBody();
-						os.write(response.getBytes());
-						os.close();
 					});
 					server.start();
 				}
@@ -180,7 +182,6 @@ class MicroLangGenerator extends AbstractGenerator {
 					
 				«ENDFOR»
 			«ENDFOR»
-			
 			public static void main(String[] args) {
 				new «name»().run();
 			}
@@ -190,12 +191,14 @@ class MicroLangGenerator extends AbstractGenerator {
 	
 	def generateServerMethod(Endpoint endpoint)'''
 		if (path.matches("«endpoint.generateRegex»")) {
-			System.out.println("«endpoint.path» was true");
+			System.out.println("«endpoint.path» was hit");
 			switch (method) {
 				«FOR operation : endpoint.operations»
-					case "«operation.method.name»":
+					case "«operation.method.name»": {
 						«endpoint.generateMethodCall(operation)»
+						util.sendResponse(exchange, 200, "Hello from «endpoint.path»");
 						break;
+					}
 				«ENDFOR»
 				default:
 					//no method matched
@@ -223,12 +226,15 @@ class MicroLangGenerator extends AbstractGenerator {
 	}
 	
 	def generateMethodCall(Endpoint endpoint, Operation operation) {
-		val paramToIndex = endpoint.pathParts.filter(ParameterPath).toMap([parameter], [endpoint.pathParts.indexOf(it)])
+		val paramToIndex = endpoint.pathParts.filter(ParameterPath).toMap([parameter], [endpoint.pathParts.indexOf(it) + 1])
 		'''
 			«FOR entry : paramToIndex.entrySet»
 				«entry.key.type.generateType» «entry.key.name» = «entry.key.type.generateBoxedType».valueOf(path.split("/")[«entry.value»]);
 			«ENDFOR»
-			«endpoint.toMethodName(operation)»(«FOR param : paramToIndex.keySet SEPARATOR ', '»«param.name»«ENDFOR»);
+			«FOR param : operation.parameters»
+				«param.type.generateType» «param.name» = «param.type.generateBoxedType».valueOf(parameters.get("«param.name»"));
+			«ENDFOR»
+			«endpoint.toMethodName(operation)»(«FOR param : paramToIndex.keySet + operation.parameters SEPARATOR ', '»«param.name»«ENDFOR»);
 		'''
 	}
 	
