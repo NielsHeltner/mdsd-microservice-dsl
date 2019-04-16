@@ -1,13 +1,16 @@
 package lib;
 
 import java.io.BufferedReader;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.lang.reflect.MalformedParametersException;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
-import java.lang.reflect.MalformedParametersException;
 
 import com.sun.net.httpserver.HttpExchange;
 
@@ -68,9 +71,19 @@ public class HttpUtil {
 		}
 	}
 	
-	public void sendResponse(HttpExchange exchange, int code) {
-		sendResponse(exchange, code, "");
+	public String sendRequest(String urlString, String method, String body) throws IOException {
+		URL url = new URL(urlString);
+		HttpURLConnection con = (HttpURLConnection) url.openConnection();
+		con.setRequestMethod(method);
+		if (!body.isEmpty()) {
+			con.setDoOutput(true);
+			DataOutputStream out = new DataOutputStream(con.getOutputStream());
+			out.writeBytes(body);
+			out.flush();
+			out.close();
+		}
+		con.disconnect();
+		return getBody(con.getInputStream());
 	}
-	
 
 }

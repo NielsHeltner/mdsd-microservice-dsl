@@ -150,7 +150,7 @@ class MicroLangGenerator extends AbstractGenerator {
 							parameters = util.toMap(body);
 						}
 						catch (Exception e) {
-							util.sendResponse(exchange, 404, "no");
+							util.sendResponse(exchange, 400, "Malformed parameters in body");
 							return;
 						}
 						System.out.println("parameters: " + parameters);
@@ -168,6 +168,7 @@ class MicroLangGenerator extends AbstractGenerator {
 						}
 					});
 					server.start();
+					System.out.println("Now listening on port " + PORT);
 				}
 				catch (IOException e) {
 					e.printStackTrace();
@@ -183,10 +184,7 @@ class MicroLangGenerator extends AbstractGenerator {
 		
 		import «interfaceTuple.pkg».«interfaceTuple.name»;
 		import lib.HttpUtil;
-		import java.io.DataOutputStream;
 		import java.io.IOException;
-		import java.net.HttpURLConnection;
-		import java.net.URL;
 		
 		public class «proxyTuple.name» implements «interfaceTuple.name» {
 			
@@ -237,7 +235,6 @@ class MicroLangGenerator extends AbstractGenerator {
 				«FOR operation : endpoint.operations»
 					case "«operation.method.name»": {
 						«endpoint.generateMethodCallParams(operation)»
-						
 						util.sendResponse(exchange, 200, «endpoint.generateMethodCall(operation)»);
 						return;
 					}
@@ -266,15 +263,14 @@ class MicroLangGenerator extends AbstractGenerator {
 		}
 	}
 	
-	def generateMethodCallParams(Endpoint endpoint, Operation operation)
-		'''
-			«FOR entry : endpoint.mapParametersToIndex.entrySet»
-				«entry.key.generateVariableAssignment('''path.split("/")[«entry.value»]''')»
-			«ENDFOR»
-			«FOR param : operation.parameters»
-				«param.generateVariableAssignment('''parameters.get("«param.name»")''')»
-			«ENDFOR»
-		'''
+	def generateMethodCallParams(Endpoint endpoint, Operation operation)'''
+		«FOR entry : endpoint.mapParametersToIndex.entrySet»
+			«entry.key.generateVariableAssignment('''path.split("/")[«entry.value»]''')»
+		«ENDFOR»
+		«FOR param : operation.parameters»
+			«param.generateVariableAssignment('''parameters.get("«param.name»")''')»
+		«ENDFOR»
+	'''
 	
 	def generateMethodCall(Endpoint endpoint, Operation operation)
 		'''«endpoint.toMethodName(operation)»«(endpoint.mapParametersToIndex.keySet + operation.parameters).generateArguments» + ""'''
@@ -334,43 +330,16 @@ class MicroLangGenerator extends AbstractGenerator {
 	def generateProxyMethod(Endpoint endpoint, Operation operation)'''
 		@Override
 		public «endpoint.generateMethodSignature(operation)» {
-			URL url;
 			try {
-				«endpoint.generateProxyRequest(operation)»
-				con.disconnect();
-				return «operation.returnType.type.generateTypeCast("util.getBody(con.getInputStream())")»;
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
+				String response = util.sendRequest("http://" + HOST + ":" + PORT + "/«endpoint.toParameterPath»", "«operation.method.name»", "«operation.paramsToBody»");
+				return «operation.returnType.type.generateTypeCast('''response''')»;
+			}
+			catch (IOException e) {
 				e.printStackTrace();
 			}
 			«operation.returnType.generateStubReturn»
-		}'''
-		
-	def generateProxyRequest(Endpoint endpoint, Operation operation) {
-		switch operation.method.name {
-			case "GET": endpoint.generateProxyGetRequest(operation)
-			case "POST": endpoint.generateProxyPostRequest(operation)
-			default: ''''''
 		}
-	}
-	
-	def generateProxyGetRequest(Endpoint endpoint, Operation operation)'''
-		url = new URL("http://" + HOST + ":" + PORT +"/«endpoint.toParameterPath»");
-		HttpURLConnection con = (HttpURLConnection) url.openConnection();
-		con.setRequestMethod("GET");
 	'''
-	
-	def generateProxyPostRequest(Endpoint endpoint, Operation operation) {'''
-		url = new URL("http://" + HOST + ":" + PORT +"/«endpoint.toParameterPath»");
-		HttpURLConnection con = (HttpURLConnection) url.openConnection();
-		con.setRequestMethod("POST");
-		con.setDoOutput(true);
-		DataOutputStream out = new DataOutputStream(con.getOutputStream());
-		out.writeBytes("«operation.toPostBody»");
-		out.flush();
-		out.close();
-	'''
-	}
 	
 	def generateStubReturn(Return returnType) {
 		if (returnType === null) {
@@ -396,8 +365,8 @@ class MicroLangGenerator extends AbstractGenerator {
 		].join('/')
 	}
 	
-	def toPostBody(Operation operation) {
-		operation.statements.filter(TypedParameter).map[
+	def paramsToBody(Operation operation) {
+		operation.parameters.map[
 			'''«name»=" + «name» + "'''
 		].join('&')
 		
