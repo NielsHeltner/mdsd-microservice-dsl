@@ -40,7 +40,7 @@ Uses:
 ;
 
 Implements:
-	'implements' target=[Template] ('(' arguments+=ID (',' arguments+=ID)* ')')?
+	'implements' target=[Template] ('(' arguments+=STRING (',' arguments+=STRING)* ')')?
 ;
 
 Endpoint:
