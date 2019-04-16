@@ -413,7 +413,7 @@ class MicroLangGenerator extends AbstractGenerator {
 	}
 	
 	def toProxyName(String name) {
-		name + 'Proxy'
+		name.toFileName + 'Proxy'
 	}
 	
 	def toMethodName(Endpoint endpoint, Operation operation) {
