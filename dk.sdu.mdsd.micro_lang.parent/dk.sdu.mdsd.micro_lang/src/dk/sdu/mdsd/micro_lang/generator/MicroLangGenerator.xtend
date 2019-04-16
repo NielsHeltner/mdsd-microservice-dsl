@@ -266,21 +266,21 @@ class MicroLangGenerator extends AbstractGenerator {
 		}
 	}
 	
-	def generateMethodCallParams(Endpoint endpoint, Operation operation) {
-		val paramToIndex = endpoint.pathParts.filter(ParameterPath).toMap([parameter], [endpoint.pathParts.indexOf(it) + 1])
+	def generateMethodCallParams(Endpoint endpoint, Operation operation)
 		'''
-			«FOR entry : paramToIndex.entrySet»
+			«FOR entry : endpoint.mapParametersToIndex.entrySet»
 				«entry.key.generateVariableAssignment('''path.split("/")[«entry.value»]''')»
 			«ENDFOR»
 			«FOR param : operation.parameters»
 				«param.generateVariableAssignment('''parameters.get("«param.name»")''')»
 			«ENDFOR»
 		'''
-	}
 	
-	def generateMethodCall(Endpoint endpoint, Operation operation) {
-		val paramToIndex = endpoint.pathParts.filter(ParameterPath).toMap([parameter], [endpoint.pathParts.indexOf(it) + 1])
-		'''«endpoint.toMethodName(operation)»«(paramToIndex.keySet + operation.parameters).generateArguments» + ""'''
+	def generateMethodCall(Endpoint endpoint, Operation operation)
+		'''«endpoint.toMethodName(operation)»«(endpoint.mapParametersToIndex.keySet + operation.parameters).generateArguments» + ""'''
+	
+	def mapParametersToIndex(Endpoint endpoint) {
+		endpoint.pathParts.filter(ParameterPath).toMap([parameter], [endpoint.pathParts.indexOf(it) + 1])
 	}
 	
 	def generateTypeCast(Type type, String value)
