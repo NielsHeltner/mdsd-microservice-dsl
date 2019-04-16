@@ -47,14 +47,25 @@ class MicroLangGenerator extends AbstractGenerator {
 	public static val RES_LIB_DIR = 'src/resources/generator/'
 
 	override void doGenerate(Resource resource, IFileSystemAccess2 fsa, IGeneratorContext context) {
-		val microservices = resource.allContents.filter(Microservice)
+		val microservices = resource.allContents.filter(Microservice).toList
 		microservices.forEach[generateMicroservice(fsa)]
-		//microservices.filter[!find(it, microservices.toList).empty].forEach[generateProxy(fsa)]
+		microservices.filter[!find(it, microservices).empty].forEach[generateProxy(fsa)]
 		
 		fsa.generateFilesFromDir(RES_LIB_DIR)
 		
 		fsa.addSrcGenToClassPath
 		fsa.fixJreInClassPath
+	}
+	
+	def generateProxy(Microservice microservice, IFileSystemAccess2 fsa) {
+		val interfaceName = microservice.name.toFileName
+		val interfaceDir = GEN_INTERFACE_DIR
+		val interfacePkg = interfaceDir.toPackage
+		
+		val proxyName = interfaceName + "Proxy"
+		val proxyDir = GEN_PROXY_DIR
+		val proxyPkg = proxyDir.toPackage
+		fsa.generateFile(proxyDir + proxyName + GEN_FILE_EXT, microservice.generateProxyClass(proxyPkg, proxyName, interfacePkg, interfaceName))
 	}
 	
 	def generateMicroservice(Microservice microservice, IFileSystemAccess2 fsa) {
@@ -63,17 +74,10 @@ class MicroLangGenerator extends AbstractGenerator {
 		val interfacePkg = interfaceDir.toPackage
 		fsa.generateFile(interfaceDir + interfaceName + GEN_FILE_EXT, microservice.generateInterface(interfacePkg, interfaceName))
 		
-		val proxyName = interfaceName + "Proxy"
-		val proxyDir = GEN_PROXY_DIR
-		val proxyPkg = proxyDir.toPackage
-		if (microservice.hasUses||true) {
-			fsa.generateFile(proxyDir + proxyName + GEN_FILE_EXT, microservice.generateProxyClass(proxyPkg, proxyName, interfacePkg, interfaceName))
-		}
-		
 		val abstractName = "Abstract" + interfaceName
 		val abstractDir = GEN_ABSTRACT_DIR
 		val abstractPkg = abstractDir.toPackage
-		fsa.generateFile(abstractDir + abstractName + GEN_FILE_EXT, microservice.generateAbstractClass(abstractPkg, abstractName, interfacePkg, interfaceName, proxyPkg))
+		fsa.generateFile(abstractDir + abstractName + GEN_FILE_EXT, microservice.generateAbstractClass(abstractPkg, abstractName, interfacePkg, interfaceName))
 		
 		val className = interfaceName + "Impl"
 		val classDir = SRC_DIR + GEN_STUB_DIR
@@ -99,14 +103,13 @@ class MicroLangGenerator extends AbstractGenerator {
 		}
 	'''
 	
-	def generateAbstractClass(Microservice microservice, String pkg, String name, String interfacePkg, String interfaceName, String proxyPkg)'''
+	def generateAbstractClass(Microservice microservice, String pkg, String name, String interfacePkg, String interfaceName)'''
 		«generateHeader»
 		package «pkg»;
 		
 		import «interfacePkg».«interfaceName»;
 		«FOR uses : microservice.uses»
 		import «interfacePkg».«uses.name.toFileName»;
-		import «proxyPkg».«interfaceName»
 		«ENDFOR»
 		import lib.HttpUtil;
 		import java.util.Map;
@@ -149,21 +152,23 @@ class MicroLangGenerator extends AbstractGenerator {
 	'''
 	
 	def generateProxyClass(Microservice microservice, String pkg, String name, String interfacePkg, String interfaceName)'''
-	«generateHeader»
-	package «pkg»;
-	
-	import java.io.BufferedReader;
-	import java.io.IOException;
-	import java.io.InputStreamReader;
-	import java.net.HttpURLConnection;
-	import java.net.URL;
-	import «interfacePkg».«interfaceName»;
-	
-	public class «name» implements «interfaceName» {
-		private HttpUtil util = new HttpUtil();
+		«generateHeader»
+		package «pkg»;
 		
-		«microservice.generateMethods[endpoint, operation | endpoint.generateProxyMethod(operation)]»
-	}
+		import «interfacePkg».«interfaceName»;
+		import lib.HttpUtil;
+		import java.io.BufferedReader;
+		import java.io.IOException;
+		import java.io.InputStreamReader;
+		import java.net.HttpURLConnection;
+		import java.net.URL;
+		
+		public class «name» implements «interfaceName» {
+			
+			private HttpUtil util = new HttpUtil();
+			
+			«microservice.generateMethods[endpoint, operation | endpoint.generateProxyMethod(operation)]»
+		}
 	'''
 	
 	def generateStubClass(Microservice microservice, String pkg, String name, String abstractPkg, String abstractName)'''
@@ -255,7 +260,7 @@ class MicroLangGenerator extends AbstractGenerator {
 		'''«operation.returnType.generateReturn» «endpoint.toMethodName(operation)»«endpoint.parameters(operation).generateParameters»'''
 	
 	def generateParameters(Iterable<TypedParameter> params)
-		'''(«FOR param : params SEPARATOR ', '»«param.type.generateType» _«param.name»«ENDFOR»)'''
+		'''(«FOR param : params SEPARATOR ', '»«param.type.generateType» «param.name»«ENDFOR»)'''
 	
 	def generateArguments(Iterable<TypedParameter> params)
 		'''(«FOR param : params SEPARATOR ', '»«param.name»«ENDFOR»)'''
@@ -318,12 +323,11 @@ class MicroLangGenerator extends AbstractGenerator {
 		}
 	}
 	
-	def generateProxyGetRequest(Endpoint endpoint, Operation operation) '''
-		url = new URL("http://" + HOST + ":" + PORT +" /«endpoint.parameters(operation).mapTypesParamsToPath(endpoint)»");
+	def generateProxyGetRequest(Endpoint endpoint, Operation operation)'''
+		url = new URL("http://" + HOST + ":" + PORT +" /«endpoint.toParameterPath»");
 		HttpURLConnection con = (HttpURLConnection) url.openConnection();
 		con.setRequestMethod("GET");
-		'''
-	
+	'''
 	
 	def generateProxyPostRequest(Endpoint endpoint, Operation operation) {}
 	
@@ -342,8 +346,13 @@ class MicroLangGenerator extends AbstractGenerator {
 		}
 	}
 	
-	def hasUses(Microservice microservice) {
-		!microservice.uses.empty
+	def toParameterPath(Endpoint endpoint) {
+		endpoint.pathParts.map[
+			switch it {
+				NormalPath: name
+				ParameterPath: '''" + «parameter.name» + "'''
+			}
+		].join('/')
 	}
 	
 	def toFileName(String name) {
@@ -383,20 +392,6 @@ class MicroLangGenerator extends AbstractGenerator {
 	
 	def dispatch resolve(Type type, String arg) {
 		type.name = arg
-	}
-	
-	def mapTypesParamsToPath(Iterable<TypedParameter> typedParams, Endpoint endpoint) {
-		endpoint.pathParts.map[
-			switch it {
-				NormalPath: name
-				ParameterPath: it.getParameterPart(typedParams, endpoint)
-			}
-		].join('/')
-	}
-	
-	def getParameterPart(ParameterPath path, Iterable<TypedParameter> typedParams, Endpoint endpoint) {
-		val index = endpoint.pathParts.filter(ParameterPath).toList.indexOf(path)
-		"\" + _" + typedParams.get(index).name + " + \""
 	}
 	
 	def generateHeader()'''
