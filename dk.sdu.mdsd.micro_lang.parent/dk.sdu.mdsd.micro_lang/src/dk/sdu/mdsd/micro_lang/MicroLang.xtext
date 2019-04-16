@@ -28,7 +28,7 @@ Microservice:
 ;
 
 Location:
-	'@' host=ID ':' port=INT
+	'@' host=STRING ':' port=INT
 ;
 
 Declaration:
