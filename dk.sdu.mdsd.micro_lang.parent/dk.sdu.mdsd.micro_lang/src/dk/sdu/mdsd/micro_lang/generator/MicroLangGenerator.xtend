@@ -62,33 +62,35 @@ class MicroLangGenerator extends AbstractGenerator {
 	}
 	
 	def generateMicroservice(Microservice microservice, List<Microservice> microservices) {
-		val interfaceTuple = microservice.generate(microservice.name.toFileName, GEN_INTERFACE_DIR, [tuple | 
+		val interfaceTuple = microservice.generateFile(microservice.name.toFileName, GEN_INTERFACE_DIR, [tuple | 
 			microservice.generateInterface(tuple)
 		])
 		
 		if (!find(microservice, microservices).empty) {
-			microservice.generate(microservice.name.toProxyName, GEN_PROXY_DIR, [tuple | 
+			microservice.generateFile(microservice.name.toProxyName, GEN_PROXY_DIR, [tuple | 
 				microservice.generateProxyClass(tuple, interfaceTuple)
 			])
 		}
 		
-		val abstractTuple = microservice.generate("Abstract" + interfaceTuple.name, GEN_ABSTRACT_DIR, [tuple | 
+		val abstractTuple = microservice.generateFile("Abstract" + interfaceTuple.name, GEN_ABSTRACT_DIR, [tuple | 
 			microservice.generateAbstractClass(tuple, interfaceTuple)
 		])
 		
-		microservice.generate(interfaceTuple.name + "Impl", GEN_IMPL_DIR, [fileName, contents | 
+		microservice.generateFile(interfaceTuple.name + "Impl", GEN_IMPL_DIR, [tuple | 
+			microservice.generateStubClass(tuple, abstractTuple)
+		], [fileName, contents | 
 			fsa.generateFileInSrcIfAbsent(fileName, contents)
 			fsa.setFilesInSrcAsNotDerived(GEN_IMPL_DIR)
-		], [tuple | microservice.generateStubClass(tuple, abstractTuple)])
+		])
 	}
 	
-	def generate(Microservice microservice, String name, String dir, (NameAndPackage) => CharSequence contentGen) {
-		microservice.generate(name, dir, [fileName, contents | 
+	def generateFile(Microservice microservice, String name, String dir, (NameAndPackage) => CharSequence contentGen) {
+		microservice.generateFile(name, dir, contentGen, [fileName, contents | 
 			fsa.generateFile(fileName, contents)
-		], contentGen)
+		])
 	}
 	
-	def generate(Microservice microservice, String name, String dir, (String, CharSequence) => void fileGen, (NameAndPackage) => CharSequence contentGen) {
+	def generateFile(Microservice microservice, String name, String dir, (NameAndPackage) => CharSequence contentGen, (String, CharSequence) => void fileGen) {
 		val pkg = dir.toPackage
 		val tuple = name -> pkg
 		fileGen.apply(dir + name + GEN_FILE_EXT, contentGen.apply(tuple))
