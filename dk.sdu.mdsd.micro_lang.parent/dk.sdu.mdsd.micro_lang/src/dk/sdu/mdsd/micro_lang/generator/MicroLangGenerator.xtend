@@ -243,8 +243,9 @@ class MicroLangGenerator extends AbstractGenerator {
 			switch (method) {
 				«FOR operation : endpoint.operations»
 					case "«operation.method.name»": {
-						«endpoint.generateMethodCall(operation)»
-						util.sendResponse(exchange, 200, "Hello from «endpoint.path»");
+						«endpoint.generateMethodCallParams(operation)»
+						
+						util.sendResponse(exchange, 200, «endpoint.generateMethodCall(operation)»);
 						return;
 					}
 				«ENDFOR»
@@ -272,7 +273,7 @@ class MicroLangGenerator extends AbstractGenerator {
 		}
 	}
 	
-	def generateMethodCall(Endpoint endpoint, Operation operation) {
+	def generateMethodCallParams(Endpoint endpoint, Operation operation) {
 		val paramToIndex = endpoint.pathParts.filter(ParameterPath).toMap([parameter], [endpoint.pathParts.indexOf(it) + 1])
 		'''
 			«FOR entry : paramToIndex.entrySet»
@@ -281,8 +282,12 @@ class MicroLangGenerator extends AbstractGenerator {
 			«FOR param : operation.parameters»
 				«param.generateVariableAssignment('''parameters.get("«param.name»")''')»
 			«ENDFOR»
-			«endpoint.toMethodName(operation)»«(paramToIndex.keySet + operation.parameters).generateArguments»;
 		'''
+	}
+	
+	def generateMethodCall(Endpoint endpoint, Operation operation) {
+		val paramToIndex = endpoint.pathParts.filter(ParameterPath).toMap([parameter], [endpoint.pathParts.indexOf(it) + 1])
+		'''«endpoint.toMethodName(operation)»«(paramToIndex.keySet + operation.parameters).generateArguments» + ""'''
 	}
 	
 	def generateTypeCast(Type type, String value)
@@ -339,10 +344,8 @@ class MicroLangGenerator extends AbstractGenerator {
 			URL url;
 			try {
 				«endpoint.generateProxyRequest(operation)»
-				
-				util.getBody(con.getInputStream());
-				
 				con.disconnect();
+				return «operation.returnType.type.generateTypeCast("util.getBody(con.getInputStream())")»;
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
