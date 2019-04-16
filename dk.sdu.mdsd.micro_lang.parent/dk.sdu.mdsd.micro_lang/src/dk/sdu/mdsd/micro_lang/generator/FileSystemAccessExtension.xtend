@@ -48,7 +48,7 @@ class FileSystemAccessExtension {
 	}
 	
 	def generateFileInSrcIfAbsent(IFileSystemAccess2 fsa, String fileName, CharSequence contents) {
-		if (!fsa.isFile(fileName)) {
+		if (!fsa.isFile(SRC_DIR + fileName)) {
 			fsa.generateFile(SRC_DIR + fileName, contents)
 		}
 	}
