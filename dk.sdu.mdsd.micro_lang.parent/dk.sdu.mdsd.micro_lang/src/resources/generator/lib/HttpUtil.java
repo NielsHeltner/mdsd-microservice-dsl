@@ -44,8 +44,9 @@ public class HttpUtil {
 		StringBuilder result = new StringBuilder();
 		try {
 			BufferedReader reader = new BufferedReader(new InputStreamReader(bodyStream));
-			while (reader.ready()) {
-				result.append(reader.readLine());
+			String input;
+			while ((input = reader.readLine()) != null) {
+				result.append(input);
 			}
 		}
 		catch (IOException e) {
