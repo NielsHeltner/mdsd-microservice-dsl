@@ -67,12 +67,17 @@ class MicroLangGenerator extends AbstractGenerator {
 		microservice.generateClassFile(fsa, abstractTuple)
 	}
 	
+	def generate(Microservice microservice, String name, String dir) {
+		
+	}
+	
 	def generateInterfaceFile(Microservice microservice, IFileSystemAccess2 fsa) {
 		val interfaceName = microservice.name.toFileName
 		val interfaceDir = GEN_INTERFACE_DIR
 		val interfacePkg = interfaceDir.toPackage
-		fsa.generateFile(interfaceDir + interfaceName + GEN_FILE_EXT, microservice.generateInterface(interfacePkg, interfaceName))
-		return interfaceName -> interfacePkg
+		val interfaceTuple = interfaceName -> interfacePkg
+		fsa.generateFile(interfaceDir + interfaceName + GEN_FILE_EXT, microservice.generateInterface(interfaceTuple))
+		return interfaceTuple
 	}
 	
 	def generateProxyClassFile(Microservice microservice, IFileSystemAccess2 fsa) {
@@ -106,11 +111,11 @@ class MicroLangGenerator extends AbstractGenerator {
 		dir.replaceAll("/", ".").substring(0, dir.length - 1)
 	}
 	
-	def generateInterface(Microservice microservice, String pkg, String name)'''
+	def generateInterface(Microservice microservice, NameAndPackage interfaceTuple)'''
 		«generateHeader»
-		package «pkg»;
+		package «interfaceTuple.pkg»;
 		
-		public interface «name» {
+		public interface «interfaceTuple.name» {
 			
 			String HOST = "«microservice.location.host»";
 			int PORT = «microservice.location.port»;
