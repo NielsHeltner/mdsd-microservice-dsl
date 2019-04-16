@@ -23,6 +23,8 @@ import org.eclipse.xtext.generator.IGeneratorContext
 
 import static org.eclipse.emf.ecore.util.EcoreUtil.UsageCrossReferencer.find
 
+import static extension dk.sdu.mdsd.micro_lang.generator.NameAndPackage.operator_mappedTo
+
 /**
  * Generates code from your model files on save.
  * 
@@ -49,7 +51,7 @@ class MicroLangGenerator extends AbstractGenerator {
 	override void doGenerate(Resource resource, IFileSystemAccess2 fsa, IGeneratorContext context) {
 		val microservices = resource.allContents.filter(Microservice).toList
 		microservices.forEach[generateMicroservice(fsa)]
-		microservices.filter[!find(it, microservices).empty].forEach[generateProxy(fsa)]
+		microservices.filter[!find(it, microservices).empty].forEach[generateProxyClassFile(fsa)]
 		
 		fsa.generateFilesFromDir(RES_LIB_DIR)
 		
@@ -57,32 +59,46 @@ class MicroLangGenerator extends AbstractGenerator {
 		fsa.fixJreInClassPath
 	}
 	
-	def generateProxy(Microservice microservice, IFileSystemAccess2 fsa) {
-		val interfaceName = microservice.name.toFileName
-		val interfaceDir = GEN_INTERFACE_DIR
-		val interfacePkg = interfaceDir.toPackage
+	def generateMicroservice(Microservice microservice, IFileSystemAccess2 fsa) {
+		val interfaceTuple = microservice.generateInterfaceFile(fsa)
 		
-		val proxyName = interfaceName + "Proxy"
-		val proxyDir = GEN_PROXY_DIR
-		val proxyPkg = proxyDir.toPackage
-		fsa.generateFile(proxyDir + proxyName + GEN_FILE_EXT, microservice.generateProxyClass(proxyPkg, proxyName, interfacePkg, interfaceName))
+		val abstractTuple = microservice.generateAbstractClassFile(fsa, interfaceTuple)
+		
+		microservice.generateClassFile(fsa, abstractTuple)
 	}
 	
-	def generateMicroservice(Microservice microservice, IFileSystemAccess2 fsa) {
+	def generateInterfaceFile(Microservice microservice, IFileSystemAccess2 fsa) {
 		val interfaceName = microservice.name.toFileName
 		val interfaceDir = GEN_INTERFACE_DIR
 		val interfacePkg = interfaceDir.toPackage
 		fsa.generateFile(interfaceDir + interfaceName + GEN_FILE_EXT, microservice.generateInterface(interfacePkg, interfaceName))
-		
-		val abstractName = "Abstract" + interfaceName
+		return interfaceName -> interfacePkg
+	}
+	
+	def generateProxyClassFile(Microservice microservice, IFileSystemAccess2 fsa) {
+		val proxyName = microservice.name.toProxyName
+		val proxyDir = GEN_PROXY_DIR
+		val proxyPkg = proxyDir.toPackage
+		val proxyTuple = proxyName -> proxyPkg
+		fsa.generateFile(proxyDir + proxyName + GEN_FILE_EXT, microservice.generateProxyClass(proxyTuple))
+		return proxyTuple
+	}
+	
+	def generateAbstractClassFile(Microservice microservice, IFileSystemAccess2 fsa, NameAndPackage interfaceTuple) {
+		val abstractName = "Abstract" + microservice.name.toFileName
 		val abstractDir = GEN_ABSTRACT_DIR
 		val abstractPkg = abstractDir.toPackage
-		fsa.generateFile(abstractDir + abstractName + GEN_FILE_EXT, microservice.generateAbstractClass(abstractPkg, abstractName, interfacePkg, interfaceName))
-		
-		val className = interfaceName + "Impl"
+		val abstractTuple = abstractName -> abstractPkg
+		fsa.generateFile(abstractDir + abstractName + GEN_FILE_EXT, microservice.generateAbstractClass(abstractTuple, interfaceTuple))
+		return abstractTuple
+	}
+	
+	def generateClassFile(Microservice microservice, IFileSystemAccess2 fsa, NameAndPackage abstractTuple) {
+		val className = microservice.name.toFileName + "Impl"
 		val classDir = SRC_DIR + GEN_STUB_DIR
 		val classPkg = GEN_STUB_DIR.toPackage
-		fsa.generateFileIfAbsent(classDir + className + GEN_FILE_EXT, microservice.generateStubClass(classPkg, className, abstractPkg, abstractName))
+		val classTuple = className -> classPkg
+		fsa.generateFileIfAbsent(classDir + className + GEN_FILE_EXT, microservice.generateStubClass(classTuple, abstractTuple))
 		fsa.setFilesAsNotDerived(classDir)
 	}
 	
@@ -103,13 +119,14 @@ class MicroLangGenerator extends AbstractGenerator {
 		}
 	'''
 	
-	def generateAbstractClass(Microservice microservice, String pkg, String name, String interfacePkg, String interfaceName)'''
+	def generateAbstractClass(Microservice microservice, NameAndPackage abstractTuple, NameAndPackage interfaceTuple)'''
 		«generateHeader»
-		package «pkg»;
+		package «abstractTuple.pkg»;
 		
-		import «interfacePkg».«interfaceName»;
+		import «interfaceTuple.pkg».«interfaceTuple.name»;
 		«FOR uses : microservice.uses»
-		import «interfacePkg».«uses.name.toFileName»;
+		import «interfaceTuple.pkg».«uses.name.toFileName»;
+		import «GEN_PROXY_DIR.toPackage».«uses.name.toProxyName»;
 		«ENDFOR»
 		import lib.HttpUtil;
 		import java.util.Map;
@@ -117,11 +134,11 @@ class MicroLangGenerator extends AbstractGenerator {
 		import java.net.InetSocketAddress;
 		import com.sun.net.httpserver.HttpServer;
 		
-		public abstract class «name» implements «interfaceName», Runnable {
+		public abstract class «abstractTuple.name» implements «interfaceTuple.name», Runnable {
 			
 			protected HttpUtil util = new HttpUtil();
 			«FOR uses : microservice.uses»
-			protected «uses.name.toFileName» «uses.name.toAttributeName»;
+			protected «uses.name.toFileName» «uses.name.toAttributeName» = new «uses.name.toProxyName»();
 			«ENDFOR»
 			
 			@Override
@@ -151,11 +168,11 @@ class MicroLangGenerator extends AbstractGenerator {
 		}
 	'''
 	
-	def generateProxyClass(Microservice microservice, String pkg, String name, String interfacePkg, String interfaceName)'''
+	def generateProxyClass(Microservice microservice, NameAndPackage proxyTuple)'''
 		«generateHeader»
-		package «pkg»;
+		package «proxyTuple.pkg»;
 		
-		import «interfacePkg».«interfaceName»;
+		import «GEN_INTERFACE_DIR.toPackage».«microservice.name.toFileName»;
 		import lib.HttpUtil;
 		import java.io.BufferedReader;
 		import java.io.IOException;
@@ -163,7 +180,7 @@ class MicroLangGenerator extends AbstractGenerator {
 		import java.net.HttpURLConnection;
 		import java.net.URL;
 		
-		public class «name» implements «interfaceName» {
+		public class «proxyTuple.name» implements «microservice.name.toFileName» {
 			
 			private HttpUtil util = new HttpUtil();
 			
@@ -171,17 +188,17 @@ class MicroLangGenerator extends AbstractGenerator {
 		}
 	'''
 	
-	def generateStubClass(Microservice microservice, String pkg, String name, String abstractPkg, String abstractName)'''
+	def generateStubClass(Microservice microservice, NameAndPackage classTuple, NameAndPackage abstractTuple)'''
 		«generateHeader»
-		package «pkg»;
+		package «classTuple.pkg»;
 		
-		import «abstractPkg».«abstractName»;
+		import «abstractTuple.pkg».«abstractTuple.name»;
 		
-		public class «name» extends «abstractName» {
+		public class «classTuple.name» extends «abstractTuple.name» {
 			
 			«microservice.generateMethods[endpoint, operation | endpoint.generateStubMethod(operation)]»
 			public static void main(String[] args) {
-				new «name»().run();
+				new «classTuple.name»().run();
 			}
 		
 		}
@@ -361,6 +378,10 @@ class MicroLangGenerator extends AbstractGenerator {
 	
 	def toAttributeName(String name) {
 		CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL, name)
+	}
+	
+	def toProxyName(String name) {
+		name + 'Proxy'
 	}
 	
 	def toMethodName(Endpoint endpoint, Operation operation) {
