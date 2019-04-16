@@ -285,8 +285,11 @@ class MicroLangGenerator extends AbstractGenerator {
 		'''
 	}
 	
-	def generateVariableAssignment(TypedParameter param, CharSequence value)
-		'''«param.type.generateType» «param.name» = «param.type.generateBoxedType».valueOf(«value»);'''
+	def generateTypeCast(Type type, String value)
+		'''«type.generateBoxedType».valueOf(«value»)'''
+	
+	def generateVariableAssignment(TypedParameter param, String value)
+		'''«param.type.generateType» «param.name» = «param.type.generateTypeCast(value)»;'''
 	
 	def generateMethodSignature(Endpoint endpoint, Operation operation)
 		'''«operation.returnType.generateReturn» «endpoint.toMethodName(operation)»«endpoint.parameters(operation).generateParameters»'''
