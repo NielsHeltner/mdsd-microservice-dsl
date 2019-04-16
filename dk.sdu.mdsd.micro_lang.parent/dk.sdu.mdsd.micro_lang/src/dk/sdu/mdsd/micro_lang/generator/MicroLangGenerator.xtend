@@ -24,6 +24,7 @@ import org.eclipse.xtext.generator.IGeneratorContext
 import static org.eclipse.emf.ecore.util.EcoreUtil.UsageCrossReferencer.find
 
 import static extension dk.sdu.mdsd.micro_lang.generator.NameAndPackage.operator_mappedTo
+import java.util.List
 
 /**
  * Generates code from your model files on save.
@@ -43,15 +44,16 @@ class MicroLangGenerator extends AbstractGenerator {
 	public static val GEN_INTERFACE_DIR = "microservices/"
 	public static val GEN_ABSTRACT_DIR = GEN_INTERFACE_DIR + "abstr/"
 	public static val GEN_PROXY_DIR = GEN_INTERFACE_DIR + "proxy/"
-	public static val SRC_DIR = "../src/"
-	public static val GEN_STUB_DIR = "impl/"
+	public static val GEN_IMPL_DIR = "impl/"
 	
 	public static val RES_LIB_DIR = 'src/resources/generator/'
+	
+	var IFileSystemAccess2 fsa
 
 	override void doGenerate(Resource resource, IFileSystemAccess2 fsa, IGeneratorContext context) {
+		this.fsa = fsa
 		val microservices = resource.allContents.filter(Microservice).toList
-		microservices.forEach[generateMicroservice(fsa)]
-		microservices.filter[!find(it, microservices).empty].forEach[generateProxyClassFile(fsa)]
+		microservices.forEach[generateMicroservice(microservices)]
 		
 		fsa.generateFilesFromDir(RES_LIB_DIR)
 		
@@ -59,52 +61,38 @@ class MicroLangGenerator extends AbstractGenerator {
 		fsa.fixJreInClassPath
 	}
 	
-	def generateMicroservice(Microservice microservice, IFileSystemAccess2 fsa) {
-		val interfaceTuple = microservice.generateInterfaceFile(fsa)
+	def generateMicroservice(Microservice microservice, List<Microservice> microservices) {
+		val interfaceTuple = microservice.generate(microservice.name.toFileName, GEN_INTERFACE_DIR, [tuple | 
+			microservice.generateInterface(tuple)
+		])
 		
-		val abstractTuple = microservice.generateAbstractClassFile(fsa, interfaceTuple)
+		if (!find(microservice, microservices).empty) {
+			microservice.generate(microservice.name.toProxyName, GEN_PROXY_DIR, [tuple | 
+				microservice.generateProxyClass(tuple, interfaceTuple)
+			])
+		}
 		
-		microservice.generateClassFile(fsa, abstractTuple)
-	}
-	
-	def generate(Microservice microservice, String name, String dir) {
+		val abstractTuple = microservice.generate("Abstract" + interfaceTuple.name, GEN_ABSTRACT_DIR, [tuple | 
+			microservice.generateAbstractClass(tuple, interfaceTuple)
+		])
 		
+		microservice.generate(interfaceTuple.name + "Impl", GEN_IMPL_DIR, [fileName, contents | 
+			fsa.generateFileInSrcIfAbsent(fileName, contents)
+			fsa.setFilesInSrcAsNotDerived(GEN_IMPL_DIR)
+		], [tuple | microservice.generateStubClass(tuple, abstractTuple)])
 	}
 	
-	def generateInterfaceFile(Microservice microservice, IFileSystemAccess2 fsa) {
-		val interfaceName = microservice.name.toFileName
-		val interfaceDir = GEN_INTERFACE_DIR
-		val interfacePkg = interfaceDir.toPackage
-		val interfaceTuple = interfaceName -> interfacePkg
-		fsa.generateFile(interfaceDir + interfaceName + GEN_FILE_EXT, microservice.generateInterface(interfaceTuple))
-		return interfaceTuple
+	def generate(Microservice microservice, String name, String dir, (NameAndPackage) => CharSequence contentGen) {
+		microservice.generate(name, dir, [fileName, contents | 
+			fsa.generateFile(fileName, contents)
+		], contentGen)
 	}
 	
-	def generateProxyClassFile(Microservice microservice, IFileSystemAccess2 fsa) {
-		val proxyName = microservice.name.toProxyName
-		val proxyDir = GEN_PROXY_DIR
-		val proxyPkg = proxyDir.toPackage
-		val proxyTuple = proxyName -> proxyPkg
-		fsa.generateFile(proxyDir + proxyName + GEN_FILE_EXT, microservice.generateProxyClass(proxyTuple))
-		return proxyTuple
-	}
-	
-	def generateAbstractClassFile(Microservice microservice, IFileSystemAccess2 fsa, NameAndPackage interfaceTuple) {
-		val abstractName = "Abstract" + microservice.name.toFileName
-		val abstractDir = GEN_ABSTRACT_DIR
-		val abstractPkg = abstractDir.toPackage
-		val abstractTuple = abstractName -> abstractPkg
-		fsa.generateFile(abstractDir + abstractName + GEN_FILE_EXT, microservice.generateAbstractClass(abstractTuple, interfaceTuple))
-		return abstractTuple
-	}
-	
-	def generateClassFile(Microservice microservice, IFileSystemAccess2 fsa, NameAndPackage abstractTuple) {
-		val className = microservice.name.toFileName + "Impl"
-		val classDir = SRC_DIR + GEN_STUB_DIR
-		val classPkg = GEN_STUB_DIR.toPackage
-		val classTuple = className -> classPkg
-		fsa.generateFileIfAbsent(classDir + className + GEN_FILE_EXT, microservice.generateStubClass(classTuple, abstractTuple))
-		fsa.setFilesAsNotDerived(classDir)
+	def generate(Microservice microservice, String name, String dir, (String, CharSequence) => void fileGen, (NameAndPackage) => CharSequence contentGen) {
+		val pkg = dir.toPackage
+		val tuple = name -> pkg
+		fileGen.apply(dir + name + GEN_FILE_EXT, contentGen.apply(tuple))
+		return tuple
 	}
 	
 	def toPackage(String dir) {
@@ -189,18 +177,18 @@ class MicroLangGenerator extends AbstractGenerator {
 		}
 	'''
 	
-	def generateProxyClass(Microservice microservice, NameAndPackage proxyTuple)'''
+	def generateProxyClass(Microservice microservice, NameAndPackage proxyTuple, NameAndPackage interfaceTuple)'''
 		«generateHeader»
 		package «proxyTuple.pkg»;
 		
-		import «GEN_INTERFACE_DIR.toPackage».«microservice.name.toFileName»;
+		import «interfaceTuple.pkg».«interfaceTuple.name»;
 		import lib.HttpUtil;
 		import java.io.DataOutputStream;
 		import java.io.IOException;
 		import java.net.HttpURLConnection;
 		import java.net.URL;
 		
-		public class «proxyTuple.name» implements «microservice.name.toFileName» {
+		public class «proxyTuple.name» implements «interfaceTuple.name» {
 			
 			private HttpUtil util = new HttpUtil();
 			

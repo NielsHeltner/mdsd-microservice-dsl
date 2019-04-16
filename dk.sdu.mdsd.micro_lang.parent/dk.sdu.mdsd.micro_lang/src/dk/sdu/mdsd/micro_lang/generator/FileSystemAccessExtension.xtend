@@ -19,6 +19,8 @@ import static extension org.eclipse.jdt.core.IClasspathEntry.*
 
 class FileSystemAccessExtension {
 	
+	public static val SRC_DIR = "../src/"
+	
 	/**
 	 * Recursively copies every file in the directory.
 	 */
@@ -45,18 +47,18 @@ class FileSystemAccessExtension {
 		fsa.generateFile(fileName, inputStream)
 	}
 	
-	def generateFileIfAbsent(IFileSystemAccess2 fsa, String fileName, CharSequence contents) {
+	def generateFileInSrcIfAbsent(IFileSystemAccess2 fsa, String fileName, CharSequence contents) {
 		if (!fsa.isFile(fileName)) {
-			fsa.generateFile(fileName, contents)
+			fsa.generateFile(SRC_DIR + fileName, contents)
 		}
 	}
 	
-	def void setFilesAsNotDerived(IFileSystemAccess2 fsa, String path) {
-		val folder = ResourcesPlugin.workspace.root.findMember(fsa.getURI(path).toPlatformString(true)) as IFolder
+	def void setFilesInSrcAsNotDerived(IFileSystemAccess2 fsa, String path) {
+		val folder = ResourcesPlugin.workspace.root.findMember(fsa.getURI(SRC_DIR + path).toPlatformString(true)) as IFolder
 		for (resource : folder.members) {
 			switch resource.type {
 				case FILE: resource.setDerived(false, null)
-				case FOLDER: fsa.setFilesAsNotDerived(resource.projectRelativePath.toOSString)
+				case FOLDER: fsa.setFilesInSrcAsNotDerived(resource.projectRelativePath.toOSString)
 			}
 		}
 	}
