@@ -46,7 +46,9 @@ class MicroLangGenerator extends AbstractGenerator {
 	public static val RES_LIB_DIR = 'src/resources/generator/'
 
 	override void doGenerate(Resource resource, IFileSystemAccess2 fsa, IGeneratorContext context) {
-		resource.allContents.filter(Microservice).forEach[generateMicroservice(fsa)]
+		val microservices = resource.allContents.filter(Microservice)
+		microservices.forEach[generateMicroservice(fsa)]
+		//microservices.filter[!find(it, microservices.toList).empty].forEach[generateProxy(fsa)]
 		
 		fsa.generateFilesFromDir(RES_LIB_DIR)
 		
