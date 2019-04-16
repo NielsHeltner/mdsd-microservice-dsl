@@ -7,6 +7,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.util.HashMap;
 import java.util.Map;
+import java.lang.reflect.MalformedParametersException;
 
 import com.sun.net.httpserver.HttpExchange;
 
@@ -30,6 +31,9 @@ public class HttpUtil {
             String[] parameterList = parameters.split(parameterSeparator);
             for (String parameter : parameterList) {
                 String[] keyAndValue = parameter.split(keyValueSeparator);
+                if (keyAndValue.length != 2) {
+                	throw new MalformedParametersException();
+                }
                 result.put(keyAndValue[0], keyAndValue[1]);
             }
         }

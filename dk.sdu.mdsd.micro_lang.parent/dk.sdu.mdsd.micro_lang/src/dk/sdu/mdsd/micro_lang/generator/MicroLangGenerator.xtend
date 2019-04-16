@@ -113,6 +113,7 @@ class MicroLangGenerator extends AbstractGenerator {
 		«ENDFOR»
 		import lib.HttpUtil;
 		import java.util.Map;
+		import java.util.HashMap;
 		import java.io.IOException;
 		import java.net.InetSocketAddress;
 		import com.sun.net.httpserver.HttpServer;
@@ -134,9 +135,24 @@ class MicroLangGenerator extends AbstractGenerator {
 						System.out.println(method + " " + path);
 						String body = util.getBody(exchange.getRequestBody());
 						System.out.println("body: " + body);
-						Map<String, Object> parameters = util.toMap(body);
+						Map<String, Object> parameters = new HashMap<>();
+						try {
+							parameters = util.toMap(body);
+						}
+						catch (Exception e) {
+							util.sendResponse(exchange, 404, "no");
+							return;
+						}
 						System.out.println("parameters: " + parameters);
-						«microservice.generateMethods[endpoint, operation | endpoint.generateServerMethod]»
+						«FOR implement : microservice.implements»
+							«implement.resolve»
+							«FOR inheritedEndpoint : implement.inheritedEndpoints»
+								«inheritedEndpoint.generateServerMethod»
+							«ENDFOR»
+						«ENDFOR»
+						«FOR endpoint : microservice.endpoints»
+							«endpoint.generateServerMethod»
+						«ENDFOR»
 						else {
 							util.sendResponse(exchange, 404, path + " could not be found");
 						}
@@ -157,9 +173,8 @@ class MicroLangGenerator extends AbstractGenerator {
 		
 		import «interfacePkg».«interfaceName»;
 		import lib.HttpUtil;
-		import java.io.BufferedReader;
+		import java.io.DataOutputStream;
 		import java.io.IOException;
-		import java.io.InputStreamReader;
 		import java.net.HttpURLConnection;
 		import java.net.URL;
 		
@@ -324,12 +339,22 @@ class MicroLangGenerator extends AbstractGenerator {
 	}
 	
 	def generateProxyGetRequest(Endpoint endpoint, Operation operation)'''
-		url = new URL("http://" + HOST + ":" + PORT +" /«endpoint.toParameterPath»");
+		url = new URL("http://" + HOST + ":" + PORT +"/«endpoint.toParameterPath»");
 		HttpURLConnection con = (HttpURLConnection) url.openConnection();
 		con.setRequestMethod("GET");
 	'''
 	
-	def generateProxyPostRequest(Endpoint endpoint, Operation operation) {}
+	def generateProxyPostRequest(Endpoint endpoint, Operation operation) {'''
+		url = new URL("http://" + HOST + ":" + PORT +"/«endpoint.toParameterPath»");
+		HttpURLConnection con = (HttpURLConnection) url.openConnection();
+		con.setRequestMethod("POST");
+		con.setDoOutput(true);
+		DataOutputStream out = new DataOutputStream(con.getOutputStream());
+		out.writeBytes("«operation.toPostBody»");
+		out.flush();
+		out.close();
+	'''
+	}
 	
 	def generateStubReturn(Return returnType) {
 		if (returnType === null) {
@@ -353,6 +378,13 @@ class MicroLangGenerator extends AbstractGenerator {
 				ParameterPath: '''" + «parameter.name» + "'''
 			}
 		].join('/')
+	}
+	
+	def toPostBody(Operation operation) {
+		operation.statements.filter(TypedParameter).map[
+			'''«name»=" + «name» + "'''
+		].join('&')
+		
 	}
 	
 	def toFileName(String name) {
