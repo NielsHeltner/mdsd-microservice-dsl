@@ -68,7 +68,7 @@ class MicroLangModelUtil {
 	}
 	
 	def path(Endpoint endpoint) {
-		endpoint.pathParts.map[
+		'/' + endpoint.pathParts.map[
 			switch it {
 				NormalPath: name ?: ""
 				ParameterPath: '{' + parameter.type.name + '}'
