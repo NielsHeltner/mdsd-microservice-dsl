@@ -280,7 +280,7 @@ class MicroLangGenerator extends AbstractGenerator {
 	'''
 	
 	def mapParametersToIndex(Endpoint endpoint) {
-		endpoint.pathParts.filter(ParameterPath).toMap([parameter], [endpoint.pathParts.indexOf(it) + 1])
+		endpoint.parameterPaths.toMap([parameter], [endpoint.pathParts.indexOf(it) + 1])
 	}
 	
 	def generateTypeCast(Type type, String value)
@@ -385,7 +385,7 @@ class MicroLangGenerator extends AbstractGenerator {
 	}
 	
 	def toMethodName(Endpoint endpoint, Operation operation) {
-		var pathName = endpoint.pathParts.filter(NormalPath).map[name ?: ""].join("_")
+		var pathName = endpoint.normalPaths.map[name ?: ""].join("_")
 		val operationName = operation.method.name.toLowerCase
 		pathName = CaseFormat.LOWER_UNDERSCORE.to(CaseFormat.UPPER_CAMEL, pathName)
 		operationName + pathName

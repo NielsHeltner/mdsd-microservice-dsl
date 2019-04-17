@@ -52,7 +52,7 @@ class MicroLangModelUtil {
 	}
 	
 	def parameters(Endpoint endpoint, Operation operation) {
-		endpoint.pathParts.filter(ParameterPath).map[parameter] + operation.parameters
+		endpoint.parameterPaths.map[parameter] + operation.parameters
 	}
 	
 	def returnTypes(Operation operation) {
@@ -65,6 +65,14 @@ class MicroLangModelUtil {
 	
 	def hasReturn(Operation operation) {
 		operation.returnType !== null
+	}
+	
+	def normalPaths(Endpoint endpoint) {
+		endpoint.pathParts.filter(NormalPath)
+	}
+	
+	def parameterPaths(Endpoint endpoint) {
+		endpoint.pathParts.filter(ParameterPath)
 	}
 	
 	def path(Endpoint endpoint) {
