@@ -86,12 +86,7 @@ TypedParameter:
 ;
 
 Require:
-	'require' logic=Logic
-;
-
-Logic:
-	'l'
-	//boolean logic omitted for brevity
+	{Require} 'require'
 ;
 
 Return:
