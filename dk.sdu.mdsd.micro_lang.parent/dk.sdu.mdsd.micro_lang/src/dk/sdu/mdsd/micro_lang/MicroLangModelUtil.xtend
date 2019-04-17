@@ -71,14 +71,10 @@ class MicroLangModelUtil {
 		endpoint.pathParts.map[
 			switch it {
 				NormalPath: name ?: ""
-				ParameterPath: parameter.asString
+				ParameterPath: '{' + parameter.type.name + '}'
 			}
 				
 		].join('/')
-	}
-	
-	def asString(TypedParameter typedParameter) {
-		typedParameter.type.name + ' ' + typedParameter.name
 	}
 	
 }

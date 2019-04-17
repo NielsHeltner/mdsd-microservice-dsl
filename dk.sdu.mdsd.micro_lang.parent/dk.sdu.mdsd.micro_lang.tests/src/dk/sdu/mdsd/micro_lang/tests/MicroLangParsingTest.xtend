@@ -304,7 +304,7 @@ class MicroLangParsingTest {
 			microservice SECOND_SERVICE @ "localhost":5001
 			
 			microservice MOVIE_SERVICE @ "localhost":5002
-				/login/test
+				/login/{int id}
 					GET
 				uses TEST_SERVICE
 				/user/test
@@ -321,7 +321,7 @@ class MicroLangParsingTest {
 		2.assertEquals(microservice.endpoints.size)
 		2.assertEquals(microservice.uses.size)
 		
-		'login/test'.assertEquals(microservice.endpoints.head.path)
+		'login/{int}'.assertEquals(microservice.endpoints.head.path)
 		microservices.get(0).assertSame(uses.get(0))
 		'user/test'.assertEquals(microservice.endpoints.last.path)
 		microservices.get(1).assertSame(uses.get(1))
