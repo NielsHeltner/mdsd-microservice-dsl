@@ -58,17 +58,22 @@ public class HttpUtil {
 		return result.toString();
 	}
 	
-	public void sendResponse(HttpExchange exchange, int code, String response) {
+	public void sendResponse(HttpExchange exchange, int code, Object response) {
 		try {
-			System.out.println(response);
-			exchange.sendResponseHeaders(code, response.length());
+			String responseString = response.toString();
+			System.out.println(responseString);
+			exchange.sendResponseHeaders(code, responseString.length());
 			OutputStream os = exchange.getResponseBody();
-			os.write(response.getBytes());
+			os.write(responseString.getBytes());
 			os.close();
 		}
 		catch (IOException e) {
 			e.printStackTrace();
 		}
+	}
+	
+	public void sendResponse(HttpExchange exchange, int code) {
+		sendResponse(exchange, code, "");
 	}
 	
 	public String sendRequest(String urlString, String method, String body) throws IOException {

@@ -236,8 +236,7 @@ class MicroLangGenerator extends AbstractGenerator {
 			switch (method) {
 				«FOR operation : endpoint.operations»
 					case "«operation.method.name»": {
-						«endpoint.generateMethodCallParams(operation)»
-						util.sendResponse(exchange, 200, «endpoint.generateMethodCall(operation)»);
+						«endpoint.generateMethodInvocation(operation)»
 						return;
 					}
 				«ENDFOR»
@@ -265,17 +264,16 @@ class MicroLangGenerator extends AbstractGenerator {
 		}
 	}
 	
-	def generateMethodCallParams(Endpoint endpoint, Operation operation)'''
+	def generateMethodInvocation(Endpoint endpoint, Operation operation)'''
 		«FOR entry : endpoint.mapParametersToIndex.entrySet»
 			«entry.key.generateVariableAssignment('''path.split("/")[«entry.value»]''')»
 		«ENDFOR»
 		«FOR param : operation.parameters»
 			«param.generateVariableAssignment('''parameters.get("«param.name»")''')»
 		«ENDFOR»
+		«IF operation.hasReturn»Object response = «ENDIF»«endpoint.toMethodName(operation)»«(endpoint.mapParametersToIndex.keySet + operation.parameters).generateArguments»;
+		util.sendResponse(exchange, 200«IF operation.hasReturn», response«ENDIF»);
 	'''
-	
-	def generateMethodCall(Endpoint endpoint, Operation operation)
-		'''«endpoint.toMethodName(operation)»«(endpoint.mapParametersToIndex.keySet + operation.parameters).generateArguments» + ""'''
 	
 	def mapParametersToIndex(Endpoint endpoint) {
 		endpoint.pathParts.filter(ParameterPath).toMap([parameter], [endpoint.pathParts.indexOf(it) + 1])

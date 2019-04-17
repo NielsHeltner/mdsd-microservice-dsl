@@ -64,6 +64,10 @@ class MicroLangModelUtil {
 		operation.returnTypes.head
 	}
 	
+	def hasReturn(Operation operation) {
+		operation.returnType !== null
+	}
+	
 	def path(Endpoint endpoint) {
 		endpoint.pathParts.map[
 			switch it {
