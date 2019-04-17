@@ -12,10 +12,10 @@ import dk.sdu.mdsd.micro_lang.microLang.Method
 import dk.sdu.mdsd.micro_lang.microLang.Microservice
 import dk.sdu.mdsd.micro_lang.microLang.NormalPath
 import dk.sdu.mdsd.micro_lang.microLang.Operation
-import dk.sdu.mdsd.micro_lang.microLang.ParameterPath
 import dk.sdu.mdsd.micro_lang.microLang.Return
 import dk.sdu.mdsd.micro_lang.microLang.Type
 import dk.sdu.mdsd.micro_lang.microLang.TypedParameter
+import java.util.List
 import org.eclipse.emf.ecore.resource.Resource
 import org.eclipse.xtext.generator.AbstractGenerator
 import org.eclipse.xtext.generator.IFileSystemAccess2
@@ -24,7 +24,6 @@ import org.eclipse.xtext.generator.IGeneratorContext
 import static org.eclipse.emf.ecore.util.EcoreUtil.UsageCrossReferencer.find
 
 import static extension dk.sdu.mdsd.micro_lang.generator.NameAndPackage.operator_mappedTo
-import java.util.List
 
 /**
  * Generates code from your model files on save.
@@ -251,12 +250,7 @@ class MicroLangGenerator extends AbstractGenerator {
 	'''
 	
 	def generateRegex(Endpoint endpoint) {
-		'\\\\/' + endpoint.pathParts.map[
-			switch it {
-				NormalPath: name ?: ""
-				ParameterPath: parameter.type.generateRegex
-			}
-		].join('\\\\/')
+		endpoint.mapPaths([name ?: ""], [parameter.type.generateRegex], '\\\\/')
 	}
 	
 	def generateRegex(Type type) {
@@ -334,7 +328,7 @@ class MicroLangGenerator extends AbstractGenerator {
 		@Override
 		public «endpoint.generateMethodSignature(operation)» {
 			try {
-				String response = util.sendRequest("http://" + HOST + ":" + PORT + "/«endpoint.toParameterPath»", "«operation.method.name»", "«operation.paramsToBody»");
+				String response = util.sendRequest("http://" + HOST + ":" + PORT + "«endpoint.toParameterPath»", "«operation.method.name»", "«operation.paramsToBody»");
 				return «operation.returnType.type.generateTypeCast('''response''')»;
 			}
 			catch (IOException e) {
@@ -357,19 +351,11 @@ class MicroLangGenerator extends AbstractGenerator {
 	}
 	
 	def toParameterPath(Endpoint endpoint) {
-		endpoint.pathParts.map[
-			switch it {
-				NormalPath: name
-				ParameterPath: '''" + «parameter.name» + "'''
-			}
-		].join('/')
+		endpoint.mapPaths([name], ['''" + «parameter.name» + "'''], '/')
 	}
-	
-	def paramsToBody(Operation operation) {
-		operation.parameters.map[
-			'''«name»=" + «name» + "'''
-		].join('&')
 		
+	def paramsToBody(Operation operation) {
+		operation.parameters.map['''«name»=" + «name» + "'''].join('&')
 	}
 	
 	def toFileName(String name) {

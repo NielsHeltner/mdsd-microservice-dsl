@@ -74,8 +74,7 @@ class MicroLangParsingTest {
 		assertNull(operation.returnType)
 	}
 	
-	//@Test
-	//TODO: fix me (grammar issue). '/' should be a viable path
+	@Test
 	def testEndpointNoPath() {
 		val model = '''
 			microservice TEST_SERVICE @ "localhost":5000

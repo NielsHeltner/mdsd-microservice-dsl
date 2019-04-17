@@ -75,14 +75,17 @@ class MicroLangModelUtil {
 		endpoint.pathParts.filter(ParameterPath)
 	}
 	
-	def path(Endpoint endpoint) {
-		'/' + endpoint.pathParts.map[
+	def mapPaths(Endpoint endpoint, (NormalPath) => CharSequence computeNormalPaths, (ParameterPath) => CharSequence computeParameterPaths, String prefixAndJoin) {
+		prefixAndJoin + endpoint.pathParts.map[
 			switch it {
-				NormalPath: name ?: ""
-				ParameterPath: '{' + parameter.type.name + '}'
+				NormalPath: computeNormalPaths.apply(it)
+				ParameterPath: computeParameterPaths.apply(it)
 			}
-				
-		].join('/')
+		].join(prefixAndJoin)
+	}
+	
+	def path(Endpoint endpoint) {
+		endpoint.mapPaths([name ?: ""], ['{' + parameter.type.name + '}'], '/')
 	}
 	
 }
