@@ -99,9 +99,5 @@ Return:
 ;
 
 Type:
-	name=('bool' | 'string' | 'int' | 'double') arrays+=(Array)* | '{' target=[Parameter] '}'
-;
-
-Array:
-	'[' ']'
+	name=('bool' | 'string' | 'int' | 'double') | '{' target=[Parameter] '}'
 ;

@@ -10,7 +10,6 @@ import dk.sdu.mdsd.micro_lang.microLang.Operation
 import dk.sdu.mdsd.micro_lang.microLang.ParameterPath
 import dk.sdu.mdsd.micro_lang.microLang.Return
 import dk.sdu.mdsd.micro_lang.microLang.Template
-import dk.sdu.mdsd.micro_lang.microLang.Type
 import dk.sdu.mdsd.micro_lang.microLang.TypedParameter
 import dk.sdu.mdsd.micro_lang.microLang.Uses
 
@@ -79,11 +78,7 @@ class MicroLangModelUtil {
 	}
 	
 	def asString(TypedParameter typedParameter) {
-		typedParameter.type.asString + ' ' + typedParameter.name
-	}
-	
-	def asString(Type type) {
-		type.name + type.arrays.join
+		typedParameter.type.name + ' ' + typedParameter.name
 	}
 	
 }

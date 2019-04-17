@@ -306,12 +306,11 @@ class MicroLangGenerator extends AbstractGenerator {
 	}
 	
 	def generateType(Type type) {
-		val name = switch type.name {
+		switch type.name {
 			case "string": "String"
 			case "bool": "boolean"
 			default: type.name
 		}
-		name + type.arrays.join
 	}
 	
 	def generateBoxedType(Type type) {
@@ -348,9 +347,6 @@ class MicroLangGenerator extends AbstractGenerator {
 	def generateStubReturn(Return returnType) {
 		if (returnType === null) {
 			return ''''''
-		}
-		if (!returnType.type.arrays.empty) {
-			return '''return null;'''
 		}
 		switch returnType.type.name {
 			case "bool": '''return false;'''

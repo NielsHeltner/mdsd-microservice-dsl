@@ -138,7 +138,7 @@ class MicroLangParsingTest {
 		
 		val parameterInPath = (endpoint.pathParts.last as ParameterPath).parameter
 		
-		'int'.assertEquals(parameterInPath.type.asString)
+		'int'.assertEquals(parameterInPath.type.name)
 		'userId'.assertEquals(parameterInPath.name)
 		
 		'GET'.assertEquals(endpoint.operations.head.method.name)
@@ -151,7 +151,7 @@ class MicroLangParsingTest {
 				/login
 					GET
 						string username
-						string[] password
+						string password
 		'''.parse
 		model.assertNoErrors
 		val microservice = model.microservices.head
@@ -159,9 +159,9 @@ class MicroLangParsingTest {
 		
 		2.assertEquals(operation.parameters.size)
 		
-		'string'.assertEquals(operation.parameters.head.type.asString)
+		'string'.assertEquals(operation.parameters.head.type.name)
 		'username'.assertEquals(operation.parameters.head.name)
-		'string[]'.assertEquals(operation.parameters.last.type.asString)
+		'string'.assertEquals(operation.parameters.last.type.name)
 		'password'.assertEquals(operation.parameters.last.name)
 		assertNull(operation.returnType)
 	}
@@ -179,7 +179,7 @@ class MicroLangParsingTest {
 		val operation = microservice.endpoints.head.operations.head
 		
 		assertTrue(operation.parameters.empty)
-		'bool'.assertEquals(operation.returnType.type.asString)
+		'bool'.assertEquals(operation.returnType.type.name)
 	}
 	
 	@Test
@@ -188,7 +188,7 @@ class MicroLangParsingTest {
 			microservice TEST_SERVICE @ "localhost":5000
 				/average
 					GET
-						int[] numbers
+						int numbers
 						
 						return double
 		'''.parse
@@ -200,9 +200,9 @@ class MicroLangParsingTest {
 		1.assertEquals(operation.parameters.size)
 		1.assertEquals(operation.returnTypes.size)
 		
-		'int[]'.assertEquals(operation.parameters.head.type.asString)
+		'int'.assertEquals(operation.parameters.head.type.name)
 		'numbers'.assertEquals(operation.parameters.head.name)
-		'double'.assertEquals(operation.returnType.type.asString)
+		'double'.assertEquals(operation.returnType.type.name)
 	}
 	
 	@Test
@@ -213,7 +213,7 @@ class MicroLangParsingTest {
 					GET
 						return int
 						
-						int[] numbers
+						int numbers
 						
 						return double
 						
@@ -226,11 +226,11 @@ class MicroLangParsingTest {
 		2.assertEquals(operation.parameters.size)
 		2.assertEquals(operation.returnTypes.size)
 		
-		'int'.assertEquals(operation.returnTypes.head.type.asString)
-		'int[]'.assertEquals(operation.parameters.head.type.asString)
+		'int'.assertEquals(operation.returnTypes.head.type.name)
+		'int'.assertEquals(operation.parameters.head.type.name)
 		'numbers'.assertEquals(operation.parameters.head.name)
-		'double'.assertEquals(operation.returnTypes.last.type.asString)
-		'int'.assertEquals(operation.parameters.last.type.asString)
+		'double'.assertEquals(operation.returnTypes.last.type.name)
+		'int'.assertEquals(operation.parameters.last.type.name)
 		'number'.assertEquals(operation.parameters.last.name)
 	}
 	
@@ -240,7 +240,7 @@ class MicroLangParsingTest {
 			microservice TEST_SERVICE @ "localhost":5000
 				/average
 					GET
-						int[] numbers
+						int numbers
 						
 						return double
 				/{int id}/data
