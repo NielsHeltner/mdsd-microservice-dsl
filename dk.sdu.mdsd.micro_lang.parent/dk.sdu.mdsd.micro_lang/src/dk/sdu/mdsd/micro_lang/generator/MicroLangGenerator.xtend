@@ -147,7 +147,7 @@ class MicroLangGenerator extends AbstractGenerator {
 						System.out.println(method + " " + path);
 						String body = util.getBody(exchange.getRequestBody());
 						System.out.println("body: " + body);
-						Map<String, Object> parameters = new HashMap<>();
+						Map<String, String> parameters = new HashMap<>();
 						try {
 							parameters = util.toMap(body);
 						}

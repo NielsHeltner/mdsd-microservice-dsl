@@ -28,8 +28,8 @@ public class HttpUtil {
      * @param parameters
      * @return
      */
-    public Map<String, Object> toMap(String parameters) {
-    	Map<String, Object> result = new HashMap<>();
+    public Map<String, String> toMap(String parameters) {
+    	Map<String, String> result = new HashMap<>();
         if (!parameters.isEmpty()) {
             String[] parameterList = parameters.split(parameterSeparator);
             for (String parameter : parameterList) {
