@@ -44,7 +44,7 @@ class MicroLangModelUtil {
 	 * any template the target might implement.
 	 */
 	def Iterable<Endpoint> inheritedEndpoints(Implements implement) {
-		implement.target.endpoints + implement.target.implements.map[inheritedEndpoints].flatten
+		implement.target.endpoints + implement.target.implements.flatMap[inheritedEndpoints]
 	}
 	
 	def parameters(Operation operation) {
