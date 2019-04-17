@@ -165,9 +165,13 @@ class MicroLangGenerator extends AbstractGenerator {
 						«FOR endpoint : microservice.endpoints»
 							«endpoint.generateServerMethod»
 						«ENDFOR»
-						else {
-							util.sendResponse(exchange, 404, path + " could not be found");
-						}
+						«IF microservice.implements.empty && microservice.endpoints.empty»
+							util.sendResponse(exchange, 404, "No paths implemented");
+						«ELSE»
+							else {
+								util.sendResponse(exchange, 404, path + " could not be found");
+							}
+						«ENDIF»
 					});
 					server.start();
 					System.out.println("Now listening on port " + PORT);
@@ -249,7 +253,7 @@ class MicroLangGenerator extends AbstractGenerator {
 	def generateRegex(Endpoint endpoint) {
 		'\\\\/' + endpoint.pathParts.map[
 			switch it {
-				NormalPath: name
+				NormalPath: name ?: ""
 				ParameterPath: parameter.type.generateRegex
 			}
 		].join('\\\\/')
@@ -385,7 +389,7 @@ class MicroLangGenerator extends AbstractGenerator {
 	}
 	
 	def toMethodName(Endpoint endpoint, Operation operation) {
-		var pathName = endpoint.pathParts.filter(NormalPath).map[name].join("_")
+		var pathName = endpoint.pathParts.filter(NormalPath).map[name ?: ""].join("_")
 		val operationName = operation.method.name.toLowerCase
 		pathName = CaseFormat.LOWER_UNDERSCORE.to(CaseFormat.UPPER_CAMEL, pathName)
 		operationName + pathName

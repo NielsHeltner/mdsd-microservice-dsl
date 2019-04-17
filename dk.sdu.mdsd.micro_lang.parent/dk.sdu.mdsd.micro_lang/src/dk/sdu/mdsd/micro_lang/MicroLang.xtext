@@ -55,7 +55,7 @@ PathPart:
 ;
 
 NormalPath:
-	'/' (name=ID | '{' target=[Parameter] '}')
+	{NormalPath} '/' (name=ID | '{' target=[Parameter] '}')?
 ;
 
 ParameterPath:

@@ -58,13 +58,13 @@ public class HttpUtil {
 		return result.toString();
 	}
 	
-	public void sendResponse(HttpExchange exchange, int code, Object response) {
+	public void sendResponse(HttpExchange exchange, int code, Object responseObj) {
 		try {
-			String responseString = response.toString();
-			System.out.println(responseString);
-			exchange.sendResponseHeaders(code, responseString.length());
+			String response = String.valueOf(responseObj);
+			System.out.println(response);
+			exchange.sendResponseHeaders(code, response.length());
 			OutputStream os = exchange.getResponseBody();
-			os.write(responseString.getBytes());
+			os.write(response.getBytes());
 			os.close();
 		}
 		catch (IOException e) {
