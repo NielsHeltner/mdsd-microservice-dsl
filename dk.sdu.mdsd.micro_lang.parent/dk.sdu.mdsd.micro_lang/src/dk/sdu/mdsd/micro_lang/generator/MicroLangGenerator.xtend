@@ -6,6 +6,7 @@ package dk.sdu.mdsd.micro_lang.generator
 import com.google.common.base.CaseFormat
 import com.google.inject.Inject
 import dk.sdu.mdsd.micro_lang.MicroLangModelUtil
+import dk.sdu.mdsd.micro_lang.microLang.Argument
 import dk.sdu.mdsd.micro_lang.microLang.Endpoint
 import dk.sdu.mdsd.micro_lang.microLang.Implements
 import dk.sdu.mdsd.micro_lang.microLang.Method
@@ -378,11 +379,15 @@ class MicroLangGenerator extends AbstractGenerator {
 	}
 	
 	def void resolve(Implements implement) {
-		val args = implement.arguments
+		val args = implement.arguments.map[name]
 		implement.target.parameters.forEach[parameter, index | 
 			find(parameter, parameter.eContainer).forEach[EObject.resolve(args.get(index))]
 		]
 		implement.target.implements.forEach[resolve]
+	}
+	
+	def dispatch resolve(Argument argument, String arg) {
+		argument.name = arg
 	}
 	
 	def dispatch resolve(NormalPath path, String arg) {

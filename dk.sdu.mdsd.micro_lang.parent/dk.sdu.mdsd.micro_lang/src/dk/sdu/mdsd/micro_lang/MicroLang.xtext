@@ -40,7 +40,11 @@ Uses:
 ;
 
 Implements:
-	'implements' target=[Template] ('(' arguments+=STRING (',' arguments+=STRING)* ')')?
+	'implements' target=[Template] ('(' arguments+=Argument (',' arguments+=Argument)* ')')?
+;
+
+Argument:
+	name=STRING | '{' target=[Parameter] '}'
 ;
 
 Endpoint:
