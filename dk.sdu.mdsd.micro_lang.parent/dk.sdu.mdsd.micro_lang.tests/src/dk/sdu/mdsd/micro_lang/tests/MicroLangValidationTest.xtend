@@ -26,7 +26,7 @@ class MicroLangValidationTest {
 	@Test
 	def testMicroserviceUsesSelf() {
 		val model = '''
-			microservice TEST_SERVICE @ "localhost":5000
+			microservice TEST_SERVICE @ localhost:5000
 				uses TEST_SERVICE
 		'''.parse
 		model.assertError(epackage.uses, MicroLangValidator.USES_SELF)
@@ -76,7 +76,7 @@ class MicroLangValidationTest {
 	@Test
 	def testUnreachableCode() {
 		val model = '''
-			microservice TEST_SERVICE @ "localhost":5000
+			microservice TEST_SERVICE @ localhost:5000
 				/path
 					GET
 						return int
@@ -92,7 +92,7 @@ class MicroLangValidationTest {
 				/{a}
 					GET
 						return {b}
-			microservice TEST_SERVICE @ "localhost":5000
+			microservice TEST_SERVICE @ localhost:5000
 				implements TEMP(a)
 				/path
 					GET
@@ -112,7 +112,7 @@ class MicroLangValidationTest {
 	@Test
 	def testMicroserviceNameLowerCase() {
 		val model = '''
-			microservice testService @ "localhost":5000
+			microservice testService @ localhost:5000
 		'''.parse
 		model.assertWarning(epackage.microservice, MicroLangValidator.INVALID_MICROSERVICE_NAME)
 	}
@@ -120,7 +120,7 @@ class MicroLangValidationTest {
 	@Test
 	def testEndpointPathUpperCase() {
 		val model = '''
-			microservice TEST_SERVICE @ "localhost":5000
+			microservice TEST_SERVICE @ localhost:5000
 				/LOgiN
 					GET
 		'''.parse

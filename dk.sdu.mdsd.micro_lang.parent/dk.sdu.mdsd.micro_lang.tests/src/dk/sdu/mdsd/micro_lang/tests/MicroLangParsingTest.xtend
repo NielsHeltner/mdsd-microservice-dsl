@@ -39,7 +39,7 @@ class MicroLangParsingTest {
 	@Test
 	def testMicroserviceNoEndpoints() {
 		val model = '''
-			microservice TEST_SERVICE @ "localhost":5000
+			microservice TEST_SERVICE @ localhost:5000
 		'''.parse
 		model.assertNoErrors
 		val microservice = model.microservices.head
@@ -53,7 +53,7 @@ class MicroLangParsingTest {
 	@Test
 	def testEndpointNoParametersOrReturn() {
 		val model = '''
-			microservice TEST_SERVICE @ "localhost":5000
+			microservice TEST_SERVICE @ localhost:5000
 				/login
 					GET
 		'''.parse
@@ -77,7 +77,7 @@ class MicroLangParsingTest {
 	@Test
 	def testEndpointNoPath() {
 		val model = '''
-			microservice TEST_SERVICE @ "localhost":5000
+			microservice TEST_SERVICE @ localhost:5000
 				/
 					GET
 		'''.parse
@@ -97,7 +97,7 @@ class MicroLangParsingTest {
 	@Test
 	def testMicroserviceMultipleEndpoints() {
 		val model = '''
-			microservice TEST_SERVICE @ "localhost":5000
+			microservice TEST_SERVICE @ localhost:5000
 				/login
 					GET
 				/user
@@ -123,7 +123,7 @@ class MicroLangParsingTest {
 	@Test
 	def testEndpointPathParameter() {
 		val model = '''
-			microservice TEST_SERVICE @ "localhost":5000
+			microservice TEST_SERVICE @ localhost:5000
 				/login/{int userId}
 					GET
 		'''.parse
@@ -146,7 +146,7 @@ class MicroLangParsingTest {
 	@Test
 	def testEndpointParametersNoReturn() {
 		val model = '''
-			microservice TEST_SERVICE @ "localhost":5000
+			microservice TEST_SERVICE @ localhost:5000
 				/login
 					GET
 						string username
@@ -168,7 +168,7 @@ class MicroLangParsingTest {
 	@Test
 	def testEndpointReturnTypeNoParameters() {
 		val model = '''
-			microservice TEST_SERVICE @ "localhost":5000
+			microservice TEST_SERVICE @ localhost:5000
 				/login
 					GET
 						return bool
@@ -184,7 +184,7 @@ class MicroLangParsingTest {
 	@Test
 	def testEndpointParametersAndReturnType() {
 		val model = '''
-			microservice TEST_SERVICE @ "localhost":5000
+			microservice TEST_SERVICE @ localhost:5000
 				/average
 					GET
 						int numbers
@@ -207,7 +207,7 @@ class MicroLangParsingTest {
 	@Test
 	def testEndpointParametersAndReturnTypeAnyOrder() {
 		val model = '''
-			microservice TEST_SERVICE @ "localhost":5000
+			microservice TEST_SERVICE @ localhost:5000
 				/average
 					GET
 						return int
@@ -236,7 +236,7 @@ class MicroLangParsingTest {
 	@Test
 	def testMultipleMicroservicesMultipleEndpoints() {
 		val model = '''
-			microservice TEST_SERVICE @ "localhost":5000
+			microservice TEST_SERVICE @ localhost:5000
 				/average
 					GET
 						int numbers
@@ -246,7 +246,7 @@ class MicroLangParsingTest {
 					POST
 						string password
 			
-			microservice SECOND_SERVICE @ "localhost":5001
+			microservice SECOND_SERVICE @ localhost:5001
 				/login
 					GET
 				/user
@@ -255,7 +255,7 @@ class MicroLangParsingTest {
 				/user
 					DELETE
 			
-			microservice MOVIE_SERVICE @ "localhost":5002
+			microservice MOVIE_SERVICE @ localhost:5002
 				/movies
 					PUT
 						string name
@@ -278,11 +278,11 @@ class MicroLangParsingTest {
 	@Test
 	def testUsesOtherMicroservice() {
 		val model = '''
-			microservice TEST_SERVICE @ "localhost":5000
+			microservice TEST_SERVICE @ localhost:5000
 			
-			microservice SECOND_SERVICE @ "localhost":5001
+			microservice SECOND_SERVICE @ localhost:5001
 			
-			microservice MOVIE_SERVICE @ "localhost":5002
+			microservice MOVIE_SERVICE @ localhost:5002
 				uses TEST_SERVICE
 				uses SECOND_SERVICE
 		'''.parse
@@ -298,11 +298,11 @@ class MicroLangParsingTest {
 	@Test
 	def testUsesOtherMicroserviceAndEndpointsAnyOrder() {
 		val model = '''
-			microservice TEST_SERVICE @ "localhost":5000
+			microservice TEST_SERVICE @ localhost:5000
 			
-			microservice SECOND_SERVICE @ "localhost":5001
+			microservice SECOND_SERVICE @ localhost:5001
 			
-			microservice MOVIE_SERVICE @ "localhost":5002
+			microservice MOVIE_SERVICE @ localhost:5002
 				/login/{int id}
 					GET
 				uses TEST_SERVICE
