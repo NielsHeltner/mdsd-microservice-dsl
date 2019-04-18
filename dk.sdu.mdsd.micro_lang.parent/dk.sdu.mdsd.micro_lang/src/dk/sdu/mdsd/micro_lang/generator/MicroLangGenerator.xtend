@@ -329,8 +329,8 @@ class MicroLangGenerator extends AbstractGenerator {
 		@Override
 		public «endpoint.generateMethodSignature(operation)» {
 			try {
-				String response = util.sendRequest("http://" + HOST + ":" + PORT + "«endpoint.toParameterPath»", "«operation.method.name»", "«operation.paramsToBody»");
-				return «operation.returnType.type.generateTypeCast('''response''')»;
+				«IF operation.hasReturn»String response = «ENDIF»util.sendRequest("http://" + HOST + ":" + PORT + "«endpoint.toParameterPath»", "«operation.method.name»", "«operation.paramsToBody»");
+				return«IF operation.hasReturn» «operation.returnType.type.generateTypeCast('response')»«ENDIF»;
 			}
 			catch (IOException e) {
 				e.printStackTrace();
