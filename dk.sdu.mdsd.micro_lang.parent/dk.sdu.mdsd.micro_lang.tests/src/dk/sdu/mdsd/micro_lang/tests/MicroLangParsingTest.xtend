@@ -64,7 +64,7 @@ class MicroLangParsingTest {
 		
 		val endpoint = microservice.endpoints.head
 		
-		'login'.assertEquals(endpoint.path)
+		'/login'.assertEquals(endpoint.path)
 		
 		val operation = endpoint.operations.head
 		
@@ -74,8 +74,7 @@ class MicroLangParsingTest {
 		assertNull(operation.returnType)
 	}
 	
-	//@Test
-	//TODO: fix me (grammar issue). '/' should be a viable path
+	@Test
 	def testEndpointNoPath() {
 		val model = '''
 			microservice TEST_SERVICE @ localhost:5000
@@ -113,11 +112,11 @@ class MicroLangParsingTest {
 		
 		val endpoints = microservice.endpoints
 		
-		'login'.assertEquals(endpoints.get(0).path)
+		'/login'.assertEquals(endpoints.get(0).path)
 		'GET'.assertEquals(endpoints.get(0).operations.head.method.name)
-		'user'.assertEquals(endpoints.get(1).path)
+		'/user'.assertEquals(endpoints.get(1).path)
 		'POST'.assertEquals(endpoints.get(1).operations.head.method.name)
-		'user'.assertEquals(endpoints.get(2).path)
+		'/user'.assertEquals(endpoints.get(2).path)
 		'DELETE'.assertEquals(endpoints.get(2).operations.head.method.name)
 	}
 	
@@ -138,7 +137,7 @@ class MicroLangParsingTest {
 		
 		val parameterInPath = (endpoint.pathParts.last as ParameterPath).parameter
 		
-		'int'.assertEquals(parameterInPath.type.asString)
+		'int'.assertEquals(parameterInPath.type.name)
 		'userId'.assertEquals(parameterInPath.name)
 		
 		'GET'.assertEquals(endpoint.operations.head.method.name)
@@ -151,7 +150,7 @@ class MicroLangParsingTest {
 				/login
 					GET
 						string username
-						char[] password
+						string password
 		'''.parse
 		model.assertNoErrors
 		val microservice = model.microservices.head
@@ -159,9 +158,9 @@ class MicroLangParsingTest {
 		
 		2.assertEquals(operation.parameters.size)
 		
-		'string'.assertEquals(operation.parameters.head.type.asString)
+		'string'.assertEquals(operation.parameters.head.type.name)
 		'username'.assertEquals(operation.parameters.head.name)
-		'char[]'.assertEquals(operation.parameters.last.type.asString)
+		'string'.assertEquals(operation.parameters.last.type.name)
 		'password'.assertEquals(operation.parameters.last.name)
 		assertNull(operation.returnType)
 	}
@@ -179,7 +178,7 @@ class MicroLangParsingTest {
 		val operation = microservice.endpoints.head.operations.head
 		
 		assertTrue(operation.parameters.empty)
-		'bool'.assertEquals(operation.returnType.type.asString)
+		'bool'.assertEquals(operation.returnType.type.name)
 	}
 	
 	@Test
@@ -188,7 +187,7 @@ class MicroLangParsingTest {
 			microservice TEST_SERVICE @ localhost:5000
 				/average
 					GET
-						int[] numbers
+						int numbers
 						
 						return double
 		'''.parse
@@ -200,9 +199,9 @@ class MicroLangParsingTest {
 		1.assertEquals(operation.parameters.size)
 		1.assertEquals(operation.returnTypes.size)
 		
-		'int[]'.assertEquals(operation.parameters.head.type.asString)
+		'int'.assertEquals(operation.parameters.head.type.name)
 		'numbers'.assertEquals(operation.parameters.head.name)
-		'double'.assertEquals(operation.returnType.type.asString)
+		'double'.assertEquals(operation.returnType.type.name)
 	}
 	
 	@Test
@@ -213,11 +212,11 @@ class MicroLangParsingTest {
 					GET
 						return int
 						
-						int[] numbers
+						int numbers
 						
 						return double
 						
-						long number
+						int number
 		'''.parse
 		val microservice = model.microservices.head
 		val operation = microservice.endpoints.head.operations.head
@@ -226,11 +225,11 @@ class MicroLangParsingTest {
 		2.assertEquals(operation.parameters.size)
 		2.assertEquals(operation.returnTypes.size)
 		
-		'int'.assertEquals(operation.returnTypes.head.type.asString)
-		'int[]'.assertEquals(operation.parameters.head.type.asString)
+		'int'.assertEquals(operation.returnTypes.head.type.name)
+		'int'.assertEquals(operation.parameters.head.type.name)
 		'numbers'.assertEquals(operation.parameters.head.name)
-		'double'.assertEquals(operation.returnTypes.last.type.asString)
-		'long'.assertEquals(operation.parameters.last.type.asString)
+		'double'.assertEquals(operation.returnTypes.last.type.name)
+		'int'.assertEquals(operation.parameters.last.type.name)
 		'number'.assertEquals(operation.parameters.last.name)
 	}
 	
@@ -240,7 +239,7 @@ class MicroLangParsingTest {
 			microservice TEST_SERVICE @ localhost:5000
 				/average
 					GET
-						int[] numbers
+						int numbers
 						
 						return double
 				/{int id}/data
@@ -304,7 +303,7 @@ class MicroLangParsingTest {
 			microservice SECOND_SERVICE @ localhost:5001
 			
 			microservice MOVIE_SERVICE @ localhost:5002
-				/login/test
+				/login/{int id}
 					GET
 				uses TEST_SERVICE
 				/user/test
@@ -321,9 +320,9 @@ class MicroLangParsingTest {
 		2.assertEquals(microservice.endpoints.size)
 		2.assertEquals(microservice.uses.size)
 		
-		'login/test'.assertEquals(microservice.endpoints.head.path)
+		'/login/{int}'.assertEquals(microservice.endpoints.head.path)
 		microservices.get(0).assertSame(uses.get(0))
-		'user/test'.assertEquals(microservice.endpoints.last.path)
+		'/user/test'.assertEquals(microservice.endpoints.last.path)
 		microservices.get(1).assertSame(uses.get(1))
 	}
 	

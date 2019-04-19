@@ -6,23 +6,25 @@ package dk.sdu.mdsd.micro_lang.generator
 import com.google.common.base.CaseFormat
 import com.google.inject.Inject
 import dk.sdu.mdsd.micro_lang.MicroLangModelUtil
-import dk.sdu.mdsd.micro_lang.microLang.Element
+import dk.sdu.mdsd.micro_lang.microLang.Argument
 import dk.sdu.mdsd.micro_lang.microLang.Endpoint
 import dk.sdu.mdsd.micro_lang.microLang.Implements
+import dk.sdu.mdsd.micro_lang.microLang.Method
 import dk.sdu.mdsd.micro_lang.microLang.Microservice
+import dk.sdu.mdsd.micro_lang.microLang.NormalPath
 import dk.sdu.mdsd.micro_lang.microLang.Operation
 import dk.sdu.mdsd.micro_lang.microLang.Return
-import dk.sdu.mdsd.micro_lang.microLang.Template
+import dk.sdu.mdsd.micro_lang.microLang.Type
 import dk.sdu.mdsd.micro_lang.microLang.TypedParameter
-import dk.sdu.mdsd.micro_lang.microLang.Uses
-import java.io.File
-import java.io.FileInputStream
 import java.util.List
-import org.eclipse.core.runtime.FileLocator
 import org.eclipse.emf.ecore.resource.Resource
 import org.eclipse.xtext.generator.AbstractGenerator
 import org.eclipse.xtext.generator.IFileSystemAccess2
 import org.eclipse.xtext.generator.IGeneratorContext
+
+import static org.eclipse.emf.ecore.util.EcoreUtil.UsageCrossReferencer.find
+
+import static extension dk.sdu.mdsd.micro_lang.generator.NameAndPackage.operator_mappedTo
 
 /**
  * Generates code from your model files on save.
@@ -34,121 +36,374 @@ class MicroLangGenerator extends AbstractGenerator {
 	@Inject
 	extension MicroLangModelUtil
 	
+	@Inject
+	extension FileSystemAccessExtension
+	
 	public static val GEN_FILE_EXT = ".java"
 	
-	public static val GEN_TEMPLATES_INTERFACE_DIR = "templates/"
-	public static val GEN_MICROSERVICES_INTERFACE_DIR = "microservices/"
-	
-	public static val GEN_TEMPLATES_IMPL_DIR = GEN_TEMPLATES_INTERFACE_DIR + "impl/"
-	public static val GEN_MICROSERVICES_IMPL_DIR = GEN_MICROSERVICES_INTERFACE_DIR + "microservices/"
+	public static val GEN_INTERFACE_DIR = "microservices/"
+	public static val GEN_ABSTRACT_DIR = GEN_INTERFACE_DIR + "abstr/"
+	public static val GEN_PROXY_DIR = GEN_INTERFACE_DIR + "proxy/"
+	public static val GEN_IMPL_DIR = "impl/"
 	
 	public static val RES_LIB_DIR = 'src/resources/generator/'
+	
+	var IFileSystemAccess2 fsa
 
 	override void doGenerate(Resource resource, IFileSystemAccess2 fsa, IGeneratorContext context) {
-		resource.allContents.filter(Element).forEach[generateElement(fsa)]
+		this.fsa = fsa
+		val microservices = resource.allContents.filter(Microservice).toList
+		microservices.forEach[generateMicroservice(microservices)]
 		
 		fsa.generateFilesFromDir(RES_LIB_DIR)
-	}
-	
-	def dispatch generateElement(Template template, IFileSystemAccess2 fsa) {
-		val interfaceName = template.name.toFileName
-		val interfaceDir = GEN_TEMPLATES_INTERFACE_DIR
-		val interfacePkg = interfaceDir.replaceAll("/", ".").substring(0, interfaceDir.length - 1)
-		fsa.generateFile(interfaceDir + interfaceName + GEN_FILE_EXT, template.generateInterface(interfacePkg, interfaceName))
 		
-		val className = interfaceName + "Impl"
-		val classDir = GEN_TEMPLATES_IMPL_DIR
-		val classPkg = classDir.replaceAll("/", ".").substring(0, classDir.length - 1)
-		fsa.generateFile(classDir + className + GEN_FILE_EXT, template.generateClass(classPkg, className, interfacePkg, interfaceName))
+		fsa.addSrcGenToClassPath
+		fsa.fixJreInClassPath
 	}
 	
-	def dispatch generateElement(Microservice microservice, IFileSystemAccess2 fsa) {
+	def generateMicroservice(Microservice microservice, List<Microservice> microservices) {
+		val interfaceTuple = microservice.generateFile(microservice.name.toFileName, GEN_INTERFACE_DIR, [tuple | 
+			microservice.generateInterface(tuple)
+		])
+		
+		if (!find(microservice, microservices).empty) {
+			microservice.generateFile(microservice.name.toProxyName, GEN_PROXY_DIR, [tuple | 
+				microservice.generateProxyClass(tuple, interfaceTuple)
+			])
+		}
+		
+		val abstractTuple = microservice.generateFile("Abstract" + interfaceTuple.name, GEN_ABSTRACT_DIR, [tuple | 
+			microservice.generateAbstractClass(tuple, interfaceTuple)
+		])
+		
+		microservice.generateFile(interfaceTuple.name + "Impl", GEN_IMPL_DIR, [tuple | 
+			microservice.generateStubClass(tuple, abstractTuple)
+		], [fileName, contents | 
+			fsa.generateFileInSrcIfAbsent(fileName, contents)
+			fsa.setFilesInSrcAsNotDerived(GEN_IMPL_DIR)
+		])
 	}
 	
-	def dispatch generateInterface(Template template, String pkg, String name)'''
+	def generateFile(Microservice microservice, String name, String dir, (NameAndPackage) => CharSequence contentGen) {
+		microservice.generateFile(name, dir, contentGen, [fileName, contents | 
+			fsa.generateFile(fileName, contents)
+		])
+	}
+	
+	def generateFile(Microservice microservice, String name, String dir, (NameAndPackage) => CharSequence contentGen, (String, CharSequence) => void fileGen) {
+		val pkg = dir.toPackage
+		val tuple = name -> pkg
+		fileGen.apply(dir + name + GEN_FILE_EXT, contentGen.apply(tuple))
+		return tuple
+	}
+	
+	def toPackage(String dir) {
+		dir.replaceAll("/", ".").substring(0, dir.length - 1)
+	}
+	
+	def generateInterface(Microservice microservice, NameAndPackage interfaceTuple)'''
 		«generateHeader»
-		package «pkg»;
+		package «interfaceTuple.pkg»;
 		
-		public interface «name» {
+		public interface «interfaceTuple.name» {
 			
-			«FOR declaration : template.declarations»
-			«declaration.generateDeclarationInterfaceCode»
+			String HOST = "«microservice.location.host»";
+			int PORT = «microservice.location.port»;
+			
+			«microservice.generateMethods[endpoint, operation | endpoint.generateMethodSignature(operation) + ';']»
+		}
+	'''
+	
+	def generateAbstractClass(Microservice microservice, NameAndPackage abstractTuple, NameAndPackage interfaceTuple)'''
+		«generateHeader»
+		package «abstractTuple.pkg»;
+		
+		import «interfaceTuple.pkg».«interfaceTuple.name»;
+		«FOR uses : microservice.uses»
+		import «interfaceTuple.pkg».«uses.name.toFileName»;
+		import «GEN_PROXY_DIR.toPackage».«uses.name.toProxyName»;
+		«ENDFOR»
+		import lib.HttpUtil;
+		import java.util.Map;
+		import java.util.HashMap;
+		import java.io.IOException;
+		import java.net.InetSocketAddress;
+		import com.sun.net.httpserver.HttpServer;
+		
+		public abstract class «abstractTuple.name» implements «interfaceTuple.name», Runnable {
+			
+			protected HttpUtil util = new HttpUtil();
+			«FOR uses : microservice.uses»
+			protected «uses.name.toFileName» «uses.name.toAttributeName» = new «uses.name.toProxyName»();
 			«ENDFOR»
-		}
-	'''
-	
-	def dispatch generateInterface(Microservice microservice, String pkg, String name)'''
-	'''
-	
-	def dispatch generateClass(Template template, String pkg, String name, String interfacePkg, String interfaceName)'''
-		«generateHeader»
-		package «pkg»;
-		
-		import «interfacePkg».«interfaceName»;
-		
-		public class «name» implements «interfaceName» {
-			//class impl
-		}
-	'''
-	
-	def dispatch generateClass(Microservice microservice, String pkg, String name, String interfacePkg, String interfaceName)'''
-	'''
-	
-	def dispatch generateDeclarationInterfaceCode(Uses uses)'''
-		//code for injecting microservice
-	'''
-	
-	def dispatch generateDeclarationInterfaceCode(Implements implement)'''
-		//code for implementing a template
-	'''
-	
-	def dispatch generateDeclarationInterfaceCode(Endpoint endpoint)'''
-		«FOR operation : endpoint.operations»
-			«endpoint.generateMethodSignature(operation)»;
 			
+			@Override
+			public final void run() {
+				try {
+					HttpServer server = HttpServer.create(new InetSocketAddress(PORT), 0);
+					server.createContext("/", exchange -> {
+						String path = exchange.getRequestURI().getPath();
+						String method = exchange.getRequestMethod();
+						System.out.println(method + " " + path);
+						String body = util.getBody(exchange.getRequestBody());
+						System.out.println("body: " + body);
+						Map<String, String> parameters = new HashMap<>();
+						try {
+							parameters = util.toMap(body);
+						}
+						catch (Exception e) {
+							util.sendResponse(exchange, 400, "Malformed parameters in body");
+							return;
+						}
+						System.out.println("parameters: " + parameters);
+						«FOR implement : microservice.implements»
+							«implement.resolve»
+							«FOR inheritedEndpoint : implement.inheritedEndpoints»
+								«inheritedEndpoint.generateServerMethod»
+							«ENDFOR»
+						«ENDFOR»
+						«FOR endpoint : microservice.endpoints»
+							«endpoint.generateServerMethod»
+						«ENDFOR»
+						«IF microservice.implements.empty && microservice.endpoints.empty»
+							util.sendResponse(exchange, 404, "No paths implemented");
+						«ELSE»
+							else {
+								util.sendResponse(exchange, 404, path + " could not be found");
+							}
+						«ENDIF»
+					});
+					server.start();
+					System.out.println("Now listening on port " + PORT);
+				}
+				catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		
+		}
+	'''
+	
+	def generateProxyClass(Microservice microservice, NameAndPackage proxyTuple, NameAndPackage interfaceTuple)'''
+		«generateHeader»
+		package «proxyTuple.pkg»;
+		
+		import «interfaceTuple.pkg».«interfaceTuple.name»;
+		import lib.HttpUtil;
+		import java.io.IOException;
+		
+		public class «proxyTuple.name» implements «interfaceTuple.name» {
+			
+			private HttpUtil util = new HttpUtil();
+			
+			«microservice.generateMethods[endpoint, operation | endpoint.generateProxyMethod(operation)]»
+		}
+	'''
+	
+	def generateStubClass(Microservice microservice, NameAndPackage classTuple, NameAndPackage abstractTuple)'''
+		«generateHeader»
+		package «classTuple.pkg»;
+		
+		import «abstractTuple.pkg».«abstractTuple.name»;
+		
+		public class «classTuple.name» extends «abstractTuple.name» {
+			
+			«microservice.generateMethods[endpoint, operation | endpoint.generateStubMethod(operation)]»
+			public static void main(String[] args) {
+				new «classTuple.name»().run();
+			}
+		
+		}
+	'''
+	
+	def generateMethods(Microservice microservice, (Endpoint, Operation) => CharSequence generator)'''
+		«FOR implement : microservice.implements»
+			«implement.resolve»
+			«FOR inheritedEndpoint : implement.inheritedEndpoints»
+				«FOR operation : inheritedEndpoint.operations»
+					«generator.apply(inheritedEndpoint, operation)»
+					
+				«ENDFOR»
+			«ENDFOR»
+		«ENDFOR»
+		«FOR endpoint : microservice.endpoints»
+			«FOR operation : endpoint.operations»
+				«generator.apply(endpoint, operation)»
+				
+			«ENDFOR»
 		«ENDFOR»
 	'''
 	
+	def generateServerMethod(Endpoint endpoint)'''
+		if (path.matches("«endpoint.generateRegex»")) {
+			System.out.println("«endpoint.path» was hit");
+			switch (method) {
+				«FOR operation : endpoint.operations»
+					case "«operation.method.name»": {
+						«endpoint.generateMethodInvocation(operation)»
+						return;
+					}
+				«ENDFOR»
+				default:
+					util.sendResponse(exchange, 405, method + " is not implemented on " + path);
+			}
+		}
+	'''
+	
+	def generateRegex(Endpoint endpoint) {
+		endpoint.mapPaths([name ?: ""], [parameter.type.generateRegex], '\\\\/')
+	}
+	
+	def generateRegex(Type type) {
+		switch type.name {
+			case "bool": '''(true|false)'''
+			case "string": '''(?!(true|false)\\b)\\b\\w+'''
+			case "int": '''\\d+'''
+			case "double": '''[0-9]+(\\.[0-9]+)'''
+		}
+	}
+	
+	def generateMethodInvocation(Endpoint endpoint, Operation operation)'''
+		«FOR entry : endpoint.mapParametersToIndex.entrySet»
+			«entry.key.generateVariableAssignment('''path.split("/")[«entry.value»]''')»
+		«ENDFOR»
+		«FOR param : operation.parameters»
+			«param.generateVariableAssignment('''parameters.get("«param.name»")''')»
+		«ENDFOR»
+		«IF operation.hasReturn»Object response = «ENDIF»«endpoint.toMethodName(operation)»«(endpoint.mapParametersToIndex.keySet + operation.parameters).generateArguments»;
+		util.sendResponse(exchange, 200«IF operation.hasReturn», response«ENDIF»);
+	'''
+	
+	def mapParametersToIndex(Endpoint endpoint) {
+		endpoint.parameterPaths.toMap([parameter], [endpoint.pathParts.indexOf(it) + 1])
+	}
+	
+	def generateTypeCast(Type type, String value)
+		'''«type.generateBoxedType».valueOf(«value»)'''
+	
+	def generateVariableAssignment(TypedParameter param, String value)
+		'''«param.type.generateType» «param.name» = «param.type.generateTypeCast(value)»;'''
+	
 	def generateMethodSignature(Endpoint endpoint, Operation operation)
-		'''«operation.returnType.generateReturnCode» «endpoint.path.toMethodName(operation.method.name)»«operation.parameters.generateParameters»'''
+		'''«operation.returnType.generateReturn» «endpoint.toMethodName(operation)»«endpoint.parameters(operation).generateParameters»'''
 	
-	def generateParameters(List<TypedParameter> params)
-		'''(«FOR param : params SEPARATOR ', '»«param.type.asString» _«param.name»«ENDFOR»)'''
+	def generateParameters(Iterable<TypedParameter> params)
+		'''(«FOR param : params SEPARATOR ', '»«param.type.generateType» «param.name»«ENDFOR»)'''
 	
-	def generateReturnCode(Return returnType)
-		'''«IF returnType === null»void«ELSE»«returnType.type.asString»«ENDIF»'''
+	def generateArguments(Iterable<TypedParameter> params)
+		'''(«FOR param : params SEPARATOR ', '»«param.name»«ENDFOR»)'''
+	
+	def generateReturn(Return returnType) {
+		if (returnType === null) {
+			return '''void'''
+		}
+		'''«returnType.type.generateType»'''
+	}
+	
+	def generateType(Type type) {
+		switch type.name {
+			case "string": "String"
+			case "bool": "boolean"
+			default: type.name
+		}
+	}
+	
+	def generateBoxedType(Type type) {
+		val name = switch type.name {
+			case "int": "Integer"
+			case "bool": "Boolean"
+			default: type.name
+		}
+		name.toFirstUpper
+	}
+	
+	def generateStubMethod(Endpoint endpoint, Operation operation)'''
+		@Override
+		public «endpoint.generateMethodSignature(operation)» {
+			//TODO: implement endpoint logic here
+			«operation.returnType.generateStubReturn»
+		}
+	'''
+	
+	def generateProxyMethod(Endpoint endpoint, Operation operation)'''
+		@Override
+		public «endpoint.generateMethodSignature(operation)» {
+			try {
+				«IF operation.hasReturn»String response = «ENDIF»util.sendRequest("http://" + HOST + ":" + PORT + "«endpoint.toParameterPath»", "«operation.method.name»", "«operation.paramsToBody»");
+				return«IF operation.hasReturn» «operation.returnType.type.generateTypeCast('response')»«ENDIF»;
+			}
+			catch (IOException e) {
+				e.printStackTrace();
+			}
+			«operation.returnType.generateStubReturn»
+		}
+	'''
+	
+	def generateStubReturn(Return returnType) {
+		if (returnType === null) {
+			return ''''''
+		}
+		switch returnType.type.name {
+			case "bool": '''return false;'''
+			case "double", 
+			case "int": '''return 0;'''
+			default: '''return null;'''
+		}
+	}
+	
+	def toParameterPath(Endpoint endpoint) {
+		endpoint.mapPaths([name], ['''" + «parameter.name» + "'''], '/')
+	}
+		
+	def paramsToBody(Operation operation) {
+		operation.parameters.map['''«name»=" + «name» + "'''].join('&')
+	}
 	
 	def toFileName(String name) {
 		CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.UPPER_CAMEL, name)
 	}
 	
-	def toMethodName(String path, String operation) {
-		var pathName = path.replaceAll("/", "_")
-		val operationName = operation.toLowerCase
+	def toAttributeName(String name) {
+		CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL, name)
+	}
+	
+	def toProxyName(String name) {
+		name.toFileName + 'Proxy'
+	}
+	
+	def toMethodName(Endpoint endpoint, Operation operation) {
+		var pathName = endpoint.normalPaths.map[name ?: ""].join("_")
+		val operationName = operation.method.name.toLowerCase
 		pathName = CaseFormat.LOWER_UNDERSCORE.to(CaseFormat.UPPER_CAMEL, pathName)
 		operationName + pathName
 	}
 	
-	/**
-	 * Recursively copies every file in the directory.
-	 */
-	def void generateFilesFromDir(IFileSystemAccess2 fsa, String dirName) {
-		val dirPath = FileLocator.resolve(class.classLoader.getResource(dirName)).path
-		val relativePathStartIndex = dirPath.indexOf(RES_LIB_DIR)
-		val genDirStartIndex = relativePathStartIndex + RES_LIB_DIR.length
-		val dir = new File(dirPath)
-		for (resource : dir.listFiles) {
-			val path = resource.toURI.path
-			switch resource {
-				case resource.isFile: fsa.generateFileFromResource(path, path.substring(genDirStartIndex))
-				case resource.isDirectory: fsa.generateFilesFromDir(resource.toURI.path.substring(relativePathStartIndex))
-			}
-		}
+	def void resolve(Implements implement) {
+		val args = implement.arguments.map[name]
+		implement.target.parameters.forEach[parameter, index | 
+			find(parameter, parameter.eContainer).forEach[EObject.resolve(args.get(index))]
+		]
+		implement.target.implements.forEach[resolve]
 	}
 	
-	def generateFileFromResource(IFileSystemAccess2 fsa, String resource, String fileName) {
-		val inputStream = new FileInputStream(resource)
-		fsa.generateFile(fileName, inputStream)
+	def dispatch resolve(Argument argument, String arg) {
+		argument.name = arg
+	}
+	
+	def dispatch resolve(NormalPath path, String arg) {
+		path.name = arg
+	}
+	
+	def dispatch resolve(Method method, String arg) {
+		method.name = arg
+	}
+	
+	def dispatch resolve(TypedParameter parameter, String arg) {
+		parameter.name = arg
+	}
+	
+	def dispatch resolve(Type type, String arg) {
+		type.name = arg
 	}
 	
 	def generateHeader()'''
