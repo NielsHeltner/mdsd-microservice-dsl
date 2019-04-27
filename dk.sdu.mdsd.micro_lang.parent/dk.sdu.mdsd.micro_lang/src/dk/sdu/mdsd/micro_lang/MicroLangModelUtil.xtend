@@ -12,6 +12,7 @@ import dk.sdu.mdsd.micro_lang.microLang.Return
 import dk.sdu.mdsd.micro_lang.microLang.Template
 import dk.sdu.mdsd.micro_lang.microLang.TypedParameter
 import dk.sdu.mdsd.micro_lang.microLang.Uses
+import org.eclipse.emf.ecore.EObject
 
 /**
  * Extension utility methods for the various classes of the meta-model.
@@ -86,6 +87,10 @@ class MicroLangModelUtil {
 	
 	def path(Endpoint endpoint) {
 		endpoint.mapPaths([name ?: ""], ['{' + parameter.type.name + '}'], '/')
+	}
+	
+	def toSimpleModelName(Class<? extends EObject> clazz) {
+		clazz.interfaces.head.simpleName
 	}
 	
 }

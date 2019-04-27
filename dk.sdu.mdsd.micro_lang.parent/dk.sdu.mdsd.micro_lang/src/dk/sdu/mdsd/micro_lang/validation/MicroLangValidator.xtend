@@ -5,6 +5,7 @@ package dk.sdu.mdsd.micro_lang.validation
 
 import com.google.inject.Inject
 import dk.sdu.mdsd.micro_lang.MicroLangModelUtil
+import dk.sdu.mdsd.micro_lang.microLang.Argument
 import dk.sdu.mdsd.micro_lang.microLang.Implements
 import dk.sdu.mdsd.micro_lang.microLang.MicroLangPackage
 import dk.sdu.mdsd.micro_lang.microLang.Microservice
@@ -35,6 +36,8 @@ class MicroLangValidator extends AbstractMicroLangValidator {
 	public static val UNREACHABLE_CODE = ISSUE_CODE_PREFIX + 'UnreachableCode'
 	
 	public static val INVALID_AMOUNT_ARGS = ISSUE_CODE_PREFIX + 'InvalidAmountArgs'
+	
+	public static val PARAMETER_TYPE_MISMATCH = ISSUE_CODE_PREFIX + 'ParameterTypeMismatch'
 	
 	public static val PARAMETER_NOT_USED = ISSUE_CODE_PREFIX + 'ParameterNotUsed'
 	
@@ -103,6 +106,18 @@ class MicroLangValidator extends AbstractMicroLangValidator {
 					null, 
 					INVALID_AMOUNT_ARGS)
 		}
+	}
+	
+	@Check
+	def checkParameterType(Parameter parameter) {
+		val references = find(parameter, parameter.eContainer)
+		val inferredType = references.map[EObject].findFirst[!(it instanceof Argument)].class
+		references.filter[!(inferredType.isInstance(EObject))].filter[!(EObject instanceof Argument)].forEach[
+			error('Type mismatch: parameter used in both ' + inferredType.toSimpleModelName + ' and ' + EObject.class.toSimpleModelName,  
+				EObject, 
+				EStructuralFeature, 
+				PARAMETER_TYPE_MISMATCH)
+		]
 	}
 	
 	@Check
