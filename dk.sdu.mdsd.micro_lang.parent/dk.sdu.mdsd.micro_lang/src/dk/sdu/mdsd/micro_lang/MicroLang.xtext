@@ -47,7 +47,9 @@ Implements:
 ;
 
 Argument:
-	name=STRING | '{' target=[Parameter] '}'
+	(name=ID | '{' target=[Parameter] '}') | 
+	{MethodArgument} name=MethodName | 
+	{TypeArgument} name=TypeName
 ;
 
 Endpoint:
@@ -77,7 +79,10 @@ Operation:
 ;
 
 Method:
-	name=('GET' | 'POST' | 'PUT' | 'DELETE' | 'OPTIONS') | '{' target=[Parameter] '}'
+    name=MethodName | '{' target=[Parameter] '}'
+;
+MethodName:
+    'GET' | 'POST' | 'PUT' | 'DELETE' | 'OPTIONS'
 ;
 
 Statement:
@@ -101,5 +106,8 @@ Return:
 ;
 
 Type:
-	name=('bool' | 'string' | 'int' | 'double') | '{' target=[Parameter] '}'
+	name=TypeName | '{' target=[Parameter] '}'
+;
+TypeName:
+	'bool' | 'string' | 'int' | 'double'
 ;

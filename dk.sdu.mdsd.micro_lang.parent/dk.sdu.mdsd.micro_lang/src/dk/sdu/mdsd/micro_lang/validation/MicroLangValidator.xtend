@@ -19,6 +19,10 @@ import org.eclipse.emf.ecore.EObject
 import org.eclipse.xtext.validation.Check
 
 import static org.eclipse.emf.ecore.util.EcoreUtil.UsageCrossReferencer.find
+import dk.sdu.mdsd.micro_lang.microLang.MethodArgument
+import dk.sdu.mdsd.micro_lang.microLang.TypeArgument
+import dk.sdu.mdsd.micro_lang.microLang.Method
+import dk.sdu.mdsd.micro_lang.microLang.impl.MethodImpl
 
 /**
  * This class contains custom validation rules. 
@@ -118,6 +122,43 @@ class MicroLangValidator extends AbstractMicroLangValidator {
 				EStructuralFeature, 
 				PARAMETER_TYPE_MISMATCH)
 		]
+	}
+	
+	// for a path in template (and in general): need to check that path variables to not have the same name as POST typedParams etc
+	// also need to resolve params to check this
+	
+	@Check
+	def checkMethodArgumentUsage(MethodArgument argument) {
+		//check that the parameter this argument corresponds to is only used as it.EObject instanceof Method
+		
+		//val args = implement.arguments.map[name]
+		
+		val container = argument.eContainer as Implements
+		val argIndex = container.arguments.indexOf(argument)
+		
+		val param = container.target.parameters.get(argIndex)
+		val references = find(param, param.eContainer)
+		val inferredType = references.map[EObject].findFirst[!(it instanceof Argument)]
+		println(inferredType)
+		println(inferredType instanceof Method)
+		if (!(inferredType instanceof Method)) {
+			error('Type mismatch: argument of type ' + argument.class.toSimpleModelName + ' cannot be converted to type ' + inferredType.class.toSimpleModelName,  
+				argument, 
+				null, 
+				"argument type mismatch")
+		}
+		
+	}
+	
+	@Check
+	def checkTypeArgumentUsage(TypeArgument argument) {
+		//check that the parameter this argument corresponds to is only used as it.EObject instanceof Type
+	}
+	
+	@Check
+	def checkArgumentUsage(Argument argument) {
+		//check that the parameter this argument corresponds to is only used as it.EObject instanceof TypedParameter || it.EObject instanceof NormalPath
+		//if argument.name === null, then argument.target needs to be resolved
 	}
 	
 	@Check
