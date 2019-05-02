@@ -89,8 +89,8 @@ class MicroLangModelUtil {
 		endpoint.mapPaths([name ?: ""], ['{' + parameter.type.name + '}'], '/')
 	}
 	
-	def toSimpleModelName(Class<? extends EObject> clazz) {
-		clazz.interfaces.head.simpleName
+	def <T extends EObject> toSimpleModelName(T object) {
+		object.class.interfaces.head.simpleName
 	}
 	
 }

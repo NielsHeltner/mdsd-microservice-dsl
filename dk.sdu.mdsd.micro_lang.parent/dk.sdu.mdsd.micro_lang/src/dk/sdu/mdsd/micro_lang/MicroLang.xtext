@@ -47,7 +47,7 @@ Implements:
 ;
 
 Argument:
-	(name=ID | '{' target=[Parameter] '}') | 
+	{NameArgument} (name=ID | '{' target=[Parameter] '}') | 
 	{MethodArgument} name=MethodName | 
 	{TypeArgument} name=TypeName
 ;

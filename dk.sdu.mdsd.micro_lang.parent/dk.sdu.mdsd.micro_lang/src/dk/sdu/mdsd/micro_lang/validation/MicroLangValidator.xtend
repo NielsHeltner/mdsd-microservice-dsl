@@ -23,6 +23,11 @@ import dk.sdu.mdsd.micro_lang.microLang.MethodArgument
 import dk.sdu.mdsd.micro_lang.microLang.TypeArgument
 import dk.sdu.mdsd.micro_lang.microLang.Method
 import dk.sdu.mdsd.micro_lang.microLang.impl.MethodImpl
+import java.util.Collection
+import org.eclipse.emf.ecore.EStructuralFeature.Setting
+import dk.sdu.mdsd.micro_lang.microLang.Type
+import dk.sdu.mdsd.micro_lang.microLang.TypedParameter
+import dk.sdu.mdsd.micro_lang.microLang.NameArgument
 
 /**
  * This class contains custom validation rules. 
@@ -42,6 +47,8 @@ class MicroLangValidator extends AbstractMicroLangValidator {
 	public static val INVALID_AMOUNT_ARGS = ISSUE_CODE_PREFIX + 'InvalidAmountArgs'
 	
 	public static val PARAMETER_TYPE_MISMATCH = ISSUE_CODE_PREFIX + 'ParameterTypeMismatch'
+	
+	public static val ARGUMENT_TYPE_MISMATCH = ISSUE_CODE_PREFIX + 'ArgumentTypeMismatch'
 	
 	public static val PARAMETER_NOT_USED = ISSUE_CODE_PREFIX + 'ParameterNotUsed'
 	
@@ -115,11 +122,11 @@ class MicroLangValidator extends AbstractMicroLangValidator {
 	@Check
 	def checkParameterType(Parameter parameter) {
 		val references = find(parameter, parameter.eContainer)
-		val inferredType = references.map[EObject].findFirst[!(it instanceof Argument)].class
-		references.filter[!(inferredType.isInstance(EObject))].filter[!(EObject instanceof Argument)].forEach[
-			error('Type mismatch: parameter used in both ' + inferredType.toSimpleModelName + ' and ' + EObject.class.toSimpleModelName,  
-				EObject, 
-				EStructuralFeature, 
+		val inferredType = parameter.inferType(references)
+		references.filter[!inferredType.class.isInstance(it.EObject)].filter[!(it.EObject instanceof Argument)].forEach[
+			error('Type mismatch: expected parameter of type ' + it.EObject.toSimpleModelName + ' but received parameter of type ' + inferredType.toSimpleModelName,  
+				it.EObject, 
+				it.EStructuralFeature, 
 				PARAMETER_TYPE_MISMATCH)
 		]
 	}
@@ -129,36 +136,40 @@ class MicroLangValidator extends AbstractMicroLangValidator {
 	
 	@Check
 	def checkMethodArgumentUsage(MethodArgument argument) {
-		//check that the parameter this argument corresponds to is only used as it.EObject instanceof Method
-		
-		//val args = implement.arguments.map[name]
-		
-		val container = argument.eContainer as Implements
-		val argIndex = container.arguments.indexOf(argument)
-		
-		val param = container.target.parameters.get(argIndex)
-		val references = find(param, param.eContainer)
-		val inferredType = references.map[EObject].findFirst[!(it instanceof Argument)]
-		println(inferredType)
-		println(inferredType instanceof Method)
-		if (!(inferredType instanceof Method)) {
-			error('Type mismatch: argument of type ' + argument.class.toSimpleModelName + ' cannot be converted to type ' + inferredType.class.toSimpleModelName,  
-				argument, 
-				null, 
-				"argument type mismatch")
-		}
-		
+		argument.isArgumentWellTyped(Method)
 	}
 	
 	@Check
 	def checkTypeArgumentUsage(TypeArgument argument) {
-		//check that the parameter this argument corresponds to is only used as it.EObject instanceof Type
+		argument.isArgumentWellTyped(Type)
 	}
 	
 	@Check
-	def checkArgumentUsage(Argument argument) {
-		//check that the parameter this argument corresponds to is only used as it.EObject instanceof TypedParameter || it.EObject instanceof NormalPath
+	def checkNameArgumentUsage(NameArgument argument) {
 		//if argument.name === null, then argument.target needs to be resolved
+		
+		if (argument.name !== null) {
+			argument.isArgumentWellTyped(TypedParameter, NormalPath)
+		}
+	}
+	
+	def isArgumentWellTyped(Argument argument, Class<?>... types) {
+		val container = argument.eContainer as Implements
+		val argIndex = container.arguments.indexOf(argument)
+		
+		val parameter = container.target.parameters.get(argIndex)
+		val references = find(parameter, parameter.eContainer)
+		val inferredType = parameter.inferType(references)
+		if (!types.exists[type | type.isInstance(inferredType)]) {
+			error('Type mismatch: expected argument of type ' + inferredType.toSimpleModelName + ' but received ' + argument.toSimpleModelName, 
+					argument, 
+					null, 
+					ARGUMENT_TYPE_MISMATCH)
+		}
+	}
+	
+	def inferType(Parameter parameter, Collection<Setting> references) {
+		references.map[EObject].findFirst[!(it instanceof Argument)]
 	}
 	
 	@Check
