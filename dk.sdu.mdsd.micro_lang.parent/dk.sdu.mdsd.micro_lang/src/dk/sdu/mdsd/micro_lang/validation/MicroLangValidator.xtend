@@ -89,7 +89,7 @@ class MicroLangValidator extends AbstractMicroLangValidator {
 			return
 		}
 		visited.add(implement.target)
-		implement.target.implements.forEach[checkNoCycleInImplements(visited)]
+		implement.target.implements.forEach[checkNoCycleInImplements(newHashSet(visited))]
 	}
 	
 	@Check
