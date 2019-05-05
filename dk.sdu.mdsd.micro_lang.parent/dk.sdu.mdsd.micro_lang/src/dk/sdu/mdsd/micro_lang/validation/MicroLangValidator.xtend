@@ -125,7 +125,7 @@ class MicroLangValidator extends AbstractMicroLangValidator {
 			val references = find(parameter, implement.target)
 			val inferredType = parameter.inferType(references)
 			references.filter[!inferredType.class.isInstance(it.EObject)].filter[!(it.EObject instanceof Argument)].forEach[
-				error('Type mismatch: could not resolve parameter "' + parameter.name + '" to expected type ' + inferredType.toSimpleModelName,  
+				error('Type mismatch: expected parameter of type ' + it.EObject.toSimpleModelName + ' but received parameter of type ' + inferredType.toSimpleModelName,  
 					it.EObject, 
 					it.EStructuralFeature, 
 					PARAMETER_TYPE_MISMATCH)
@@ -163,7 +163,7 @@ class MicroLangValidator extends AbstractMicroLangValidator {
 		val references = find(parameter, parameter.eContainer)
 		val inferredType = parameter.inferType(references)
 		if (!types.exists[type | type.isInstance(inferredType)]) {
-			error('Type mismatch: expected argument of type ' + inferredType.toSimpleModelName + ' but received ' + argument.toSimpleModelName, 
+			error('Type mismatch: expected argument of type ' + inferredType.toSimpleModelName + ' but received argument of type ' + argument.toSimpleModelName, 
 					argument, 
 					null, 
 					ARGUMENT_TYPE_MISMATCH)
