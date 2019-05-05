@@ -86,7 +86,7 @@ MethodName:
 ;
 
 Statement:
-	TypedParameter | Require | Return
+	TypedParameter | Return
 ;
 
 Parameter:
@@ -95,10 +95,6 @@ Parameter:
 
 TypedParameter:
 	type=Type (name=ID | '{' target=[Parameter] '}')
-;
-
-Require:
-	{Require} 'require'
 ;
 
 Return:
