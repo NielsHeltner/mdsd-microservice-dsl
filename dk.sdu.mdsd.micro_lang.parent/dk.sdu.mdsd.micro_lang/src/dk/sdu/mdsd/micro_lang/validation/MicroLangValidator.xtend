@@ -7,27 +7,23 @@ import com.google.inject.Inject
 import dk.sdu.mdsd.micro_lang.MicroLangModelUtil
 import dk.sdu.mdsd.micro_lang.microLang.Argument
 import dk.sdu.mdsd.micro_lang.microLang.Implements
+import dk.sdu.mdsd.micro_lang.microLang.Method
+import dk.sdu.mdsd.micro_lang.microLang.MethodArgument
 import dk.sdu.mdsd.micro_lang.microLang.MicroLangPackage
 import dk.sdu.mdsd.micro_lang.microLang.Microservice
+import dk.sdu.mdsd.micro_lang.microLang.NameArgument
 import dk.sdu.mdsd.micro_lang.microLang.NormalPath
 import dk.sdu.mdsd.micro_lang.microLang.Operation
 import dk.sdu.mdsd.micro_lang.microLang.Parameter
 import dk.sdu.mdsd.micro_lang.microLang.Return
+import dk.sdu.mdsd.micro_lang.microLang.Type
+import dk.sdu.mdsd.micro_lang.microLang.TypeArgument
+import dk.sdu.mdsd.micro_lang.microLang.TypedParameter
 import dk.sdu.mdsd.micro_lang.microLang.Uses
 import java.util.Set
 import org.eclipse.emf.ecore.EObject
+import org.eclipse.emf.ecore.util.EcoreUtil.UsageCrossReferencer
 import org.eclipse.xtext.validation.Check
-
-import static org.eclipse.emf.ecore.util.EcoreUtil.UsageCrossReferencer.find
-import dk.sdu.mdsd.micro_lang.microLang.MethodArgument
-import dk.sdu.mdsd.micro_lang.microLang.TypeArgument
-import dk.sdu.mdsd.micro_lang.microLang.Method
-import dk.sdu.mdsd.micro_lang.microLang.impl.MethodImpl
-import java.util.Collection
-import org.eclipse.emf.ecore.EStructuralFeature.Setting
-import dk.sdu.mdsd.micro_lang.microLang.Type
-import dk.sdu.mdsd.micro_lang.microLang.TypedParameter
-import dk.sdu.mdsd.micro_lang.microLang.NameArgument
 
 /**
  * This class contains custom validation rules. 
@@ -123,8 +119,7 @@ class MicroLangValidator extends AbstractMicroLangValidator {
 	def checkParameterType(Implements implement) {
 		implement.target.parameters.forEach[parameter | 
 			val inferredType = parameter.inferType
-			val references = find(parameter, parameter.eContainer)
-			references.filter[!inferredType.class.isInstance(it.EObject)].filter[!(it.EObject instanceof Argument)].forEach[
+			parameter.references.filter[!inferredType.class.isInstance(it.EObject)].filter[!(it.EObject instanceof Argument)].forEach[
 				error('Type mismatch: expected parameter of type ' + it.EObject.toSimpleModelName + ' but received parameter of type ' + inferredType.toSimpleModelName,  
 					it.EObject, 
 					it.EStructuralFeature, 
@@ -175,7 +170,7 @@ class MicroLangValidator extends AbstractMicroLangValidator {
 	}
 	
 	def EObject inferType(Parameter parameter) {
-		val references = find(parameter, parameter.eContainer).map[it.EObject]
+		val references = parameter.references.map[it.EObject]
 		if (references.filter(Argument).nullOrEmpty) { //param not used as arg in this container, type is thus the first usage
 			return references.head
 		}
@@ -190,6 +185,10 @@ class MicroLangValidator extends AbstractMicroLangValidator {
 		}
 	}
 	
+	def getReferences(EObject object) {
+		UsageCrossReferencer.find(object, object.eContainer)
+	}
+	
 	def getCorrespondingParameter(Argument argument) {
 		val container = argument.eContainer as Implements
 		val index = container.arguments.indexOf(argument)
@@ -198,7 +197,7 @@ class MicroLangValidator extends AbstractMicroLangValidator {
 	
 	@Check
 	def checkParameterIsUsed(Parameter parameter) {
-		val references = find(parameter, parameter.eContainer)
+		val references = parameter.references
 		if (references.empty) {
 			warning('The parameter "' + parameter.name + '" is not used', 
 				parameter, 
