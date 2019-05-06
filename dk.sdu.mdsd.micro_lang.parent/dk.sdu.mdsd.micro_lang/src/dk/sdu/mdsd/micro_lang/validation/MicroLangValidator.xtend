@@ -122,8 +122,8 @@ class MicroLangValidator extends AbstractMicroLangValidator {
 	@Check
 	def checkParameterType(Implements implement) {
 		implement.target.parameters.forEach[parameter | 
-			val references = find(parameter, implement.target)
-			val inferredType = parameter.inferType(references)
+			val inferredType = parameter.inferType
+			val references = find(parameter, parameter.eContainer)
 			references.filter[!inferredType.class.isInstance(it.EObject)].filter[!(it.EObject instanceof Argument)].forEach[
 				error('Type mismatch: expected parameter of type ' + it.EObject.toSimpleModelName + ' but received parameter of type ' + inferredType.toSimpleModelName,  
 					it.EObject, 
@@ -148,8 +148,18 @@ class MicroLangValidator extends AbstractMicroLangValidator {
 	
 	@Check
 	def checkNameArgumentUsage(NameArgument argument) {
-		if (argument.name !== null) {
+		if (argument.target === null) {
 			argument.isArgumentWellTyped(TypedParameter, NormalPath)
+		}
+		else {
+			val expectedInferredType = argument.correspondingParameter.inferType
+			val actualInferredType = argument.target.inferType
+			if (!expectedInferredType.class.isInstance(actualInferredType)) {
+				error('Type mismatch: expected argument of type ' + expectedInferredType.toSimpleModelName + ' but received argument of type ' + actualInferredType.toSimpleModelName, 
+					argument, 
+					null, 
+					ARGUMENT_TYPE_MISMATCH)
+			}
 		}
 	}
 	
@@ -164,21 +174,20 @@ class MicroLangValidator extends AbstractMicroLangValidator {
 		}
 	}
 	
-	def EObject inferType(Parameter parameter, Collection<Setting> references) {
-		if (references.map[it.EObject].filter(Argument).nullOrEmpty) { //param not used as arg in this container, type is thus the first usage
-			return references.map[EObject].head
+	def EObject inferType(Parameter parameter) {
+		val references = find(parameter, parameter.eContainer).map[it.EObject]
+		if (references.filter(Argument).nullOrEmpty) { //param not used as arg in this container, type is thus the first usage
+			return references.head
 		}
 		else { //param IS used as arg in this container, recursively follow it until we hit container where it isn't
-			val argument = references.map[it.EObject].filter(Argument).head
-			val param = argument.correspondingParameter
-			var inferredType = param.inferType ?: // if type is null, it's because the param is never used in the "deepest" layer
-				references.map[it.EObject].findFirst[!(it instanceof Argument)] // so we keep trying to get the type from the first usage instead (that isn't an argument, since that argument only leads to a null)
-			return inferredType
+			val inferredTypeCandidates = references.filter(Argument).map[it.correspondingParameter.inferType].filterNull
+			if (inferredTypeCandidates.nullOrEmpty) { // if all candidates are null, it's because the param is never used in the "deepest" layer we could find by following arguments
+				return references.findFirst[!(it instanceof Argument)] // so we try to get the type from the first usage in the current container (the usage that isn't an argument, since that argument only leads to a null)
+			}
+			else {
+				return inferredTypeCandidates.head // if there is a candidate that isn't null, pick it!
+			}
 		}
-	}
-	
-	def inferType(Parameter parameter) {
-		parameter.inferType(find(parameter, parameter.eContainer))
 	}
 	
 	def getCorrespondingParameter(Argument argument) {
