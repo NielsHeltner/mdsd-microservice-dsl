@@ -51,6 +51,8 @@ class MicroLangValidator extends AbstractMicroLangValidator {
 	
 	public static val DUPLICATE_ENDPOINT = ISSUE_CODE_PREFIX + 'DuplicateEndpoint'
 	
+	public static val DUPLICATE_OPERATION = ISSUE_CODE_PREFIX + 'DuplicateOperation'
+	
 	public static val PARAMETER_NOT_USED = ISSUE_CODE_PREFIX + 'ParameterNotUsed'
 	
 	public static val INVALID_MICROSERVICE_NAME = ISSUE_CODE_PREFIX + 'InvalidMicroserviceName'
@@ -229,12 +231,23 @@ class MicroLangValidator extends AbstractMicroLangValidator {
 		]
 		duplicates.forEach[endpoint | endpoint.operations.forEach[operation | 
 				error('Element contains duplicate endpoints ' + endpoint.path + ' ' + operation.method.name, 
-						element, 
-						epackage.element_Name, 
-						DUPLICATE_ENDPOINT)
+					element, 
+					epackage.element_Name, 
+					DUPLICATE_ENDPOINT)
 				]
 		]
 		element.checkForDuplicateEndpoints(tail)
+	}
+	
+	@Check
+	def checkDuplicateOperations(Endpoint endpoint) {
+		val uniques = newHashSet()
+		endpoint.operations.filter[!uniques.add(it.method.name)].forEach[
+			error('Endpoint contains duplicate HTTP methods ' + it.method.name, 
+				it, 
+				epackage.operation_Method, 
+				DUPLICATE_OPERATION)
+		]
 	}
 	
 	@Check
