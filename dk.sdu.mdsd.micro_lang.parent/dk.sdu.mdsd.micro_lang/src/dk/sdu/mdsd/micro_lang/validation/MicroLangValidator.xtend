@@ -112,19 +112,25 @@ class MicroLangValidator extends AbstractMicroLangValidator {
 	
 	@Check
 	def checkImplementCorrectAmountArgs(Implements implement) {
-		val template = implement.target
-		val expected = template.parameters.size
-		val actual = implement.arguments.size
-		if (actual != expected) {
-			error('Invalid number of arguments. Expected ' + expected + ' but received ' + actual, 
+		if (!implement.hasCorrectAmountArgs) {
+			error('Invalid number of arguments', 
 					implement, 
 					null, 
 					INVALID_AMOUNT_ARGS)
 		}
 	}
 	
+	def boolean hasCorrectAmountArgs(Implements implement) {
+		val expected = implement.target.parameters.size
+		val actual = implement.arguments.size
+		actual == expected
+	}
+	
 	@Check
 	def checkParameterReferencesType(Implements implement) {
+		if (!implement.hasCorrectAmountArgs) {
+			return
+		}
 		implement.target.parameters.forEach[parameter | 
 			val inferredType = parameter.inferType
 			parameter.references.filter[!inferredType.class.isInstance(it.EObject)].filter[!(it.EObject instanceof Argument)].forEach[
@@ -141,25 +147,28 @@ class MicroLangValidator extends AbstractMicroLangValidator {
 	
 	@Check
 	def checkMethodArgumentUsage(MethodArgument argument) {
-		argument.isArgumentWellTyped(Method)
+		argument.checkArgumentType(Method)
 	}
 	
 	@Check
 	def checkTypeArgumentUsage(TypeArgument argument) {
-		argument.isArgumentWellTyped(Type)
+		argument.checkArgumentType(Type)
 	}
 	
 	@Check
 	def checkNameArgumentUsage(NameArgument argument) {
 		if (argument.target === null) {
-			argument.isArgumentWellTyped(TypedParameter, NormalPath)
+			argument.checkArgumentType(TypedParameter, NormalPath)
 		}
 		else {
-			argument.isArgumentWellTyped(argument.target.inferType.class)
+			argument.checkArgumentType(argument.target.inferType.class)
 		}
 	}
 	
-	def isArgumentWellTyped(Argument argument, Class<?>... types) {
+	def checkArgumentType(Argument argument, Class<?>... types) {
+		if (!(argument.eContainer as Implements).hasCorrectAmountArgs) {
+			return
+		}
 		val parameter = argument.correspondingParameter
 		val inferredType = parameter.inferType
 		if (!types.exists[type | type.isInstance(inferredType)]) {
@@ -175,15 +184,12 @@ class MicroLangValidator extends AbstractMicroLangValidator {
 		if (!(references.head instanceof Argument)) { // param's first usage is NOT as argument, thus the type is simply the first usage
 			return references.head
 		}
-		else { // param's first usage is as argument -- recursively follow it until we hit container where it isn't used as argument
-			val inferredTypeCandidates = references.filter(Argument).map[it.correspondingParameter.inferType].filterNull
-			if (inferredTypeCandidates.nullOrEmpty) { // if all candidates are null, it's because the param is never used in the "deepest" layer we could find by following arguments
-				return references.findFirst[!(it instanceof Argument)] // so we try to get the type from the first usage in the current container (the usage that isn't an argument, since that argument only leads to a null)
-			}
-			else {
-				return inferredTypeCandidates.head // if there is a candidate that isn't null, pick it!
-			}
+		// param's first usage is as argument -- recursively follow it until we hit container where it isn't used as argument
+		val inferredTypeCandidates = references.filter(Argument).map[it.correspondingParameter.inferType].filterNull
+		if (inferredTypeCandidates.nullOrEmpty) { // if all candidates are null, it's because the param is never used in the "deepest" layer we could find by following arguments
+			return references.findFirst[!(it instanceof Argument)] // so we try to get the type from the first usage in the current container (the usage that isn't an argument, since that argument only leads to a null)
 		}
+		return inferredTypeCandidates.head // if there is a candidate that isn't null, pick it!
 	}
 	
 	def getReferences(EObject object) {
@@ -205,8 +211,7 @@ class MicroLangValidator extends AbstractMicroLangValidator {
 	
 	@Check
 	def checkDuplicateResolvedEndpoints(Element element) {
-		println('element: ' + element.name)
-		element.implements.forEach[resolve]
+		element.implements.filter[hasCorrectAmountArgs].forEach[resolve]
 		val endpoints = element.implements.flatMap[it.inheritedEndpoints] + element.endpoints
 		element.checkForDuplicateEndpoints(endpoints)
 	}
