@@ -6,12 +6,9 @@ package dk.sdu.mdsd.micro_lang.generator
 import com.google.common.base.CaseFormat
 import com.google.inject.Inject
 import dk.sdu.mdsd.micro_lang.MicroLangModelUtil
-import dk.sdu.mdsd.micro_lang.microLang.Argument
+import dk.sdu.mdsd.micro_lang.MicroLangTemplateResolver
 import dk.sdu.mdsd.micro_lang.microLang.Endpoint
-import dk.sdu.mdsd.micro_lang.microLang.Implements
-import dk.sdu.mdsd.micro_lang.microLang.Method
 import dk.sdu.mdsd.micro_lang.microLang.Microservice
-import dk.sdu.mdsd.micro_lang.microLang.NormalPath
 import dk.sdu.mdsd.micro_lang.microLang.Operation
 import dk.sdu.mdsd.micro_lang.microLang.Return
 import dk.sdu.mdsd.micro_lang.microLang.Type
@@ -38,6 +35,9 @@ class MicroLangGenerator extends AbstractGenerator {
 	
 	@Inject
 	extension FileSystemAccessExtension
+	
+	@Inject
+	extension MicroLangTemplateResolver
 	
 	public static val GEN_FILE_EXT = ".java"
 	
@@ -376,34 +376,6 @@ class MicroLangGenerator extends AbstractGenerator {
 		val operationName = operation.method.name.toLowerCase
 		pathName = CaseFormat.LOWER_UNDERSCORE.to(CaseFormat.UPPER_CAMEL, pathName)
 		operationName + pathName
-	}
-	
-	def void resolve(Implements implement) {
-		val args = implement.arguments.map[name]
-		implement.target.parameters.forEach[parameter, index | 
-			find(parameter, parameter.eContainer).forEach[EObject.resolve(args.get(index))]
-		]
-		implement.target.implements.forEach[resolve]
-	}
-	
-	def dispatch resolve(Argument argument, String arg) {
-		argument.name = arg
-	}
-	
-	def dispatch resolve(NormalPath path, String arg) {
-		path.name = arg
-	}
-	
-	def dispatch resolve(Method method, String arg) {
-		method.name = arg
-	}
-	
-	def dispatch resolve(TypedParameter parameter, String arg) {
-		parameter.name = arg
-	}
-	
-	def dispatch resolve(Type type, String arg) {
-		type.name = arg
 	}
 	
 	def generateHeader()'''

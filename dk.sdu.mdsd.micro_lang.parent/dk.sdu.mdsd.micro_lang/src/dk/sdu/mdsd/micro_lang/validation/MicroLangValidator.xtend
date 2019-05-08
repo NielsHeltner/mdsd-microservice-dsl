@@ -5,6 +5,7 @@ package dk.sdu.mdsd.micro_lang.validation
 
 import com.google.inject.Inject
 import dk.sdu.mdsd.micro_lang.MicroLangModelUtil
+import dk.sdu.mdsd.micro_lang.MicroLangTemplateResolver
 import dk.sdu.mdsd.micro_lang.microLang.Argument
 import dk.sdu.mdsd.micro_lang.microLang.Implements
 import dk.sdu.mdsd.micro_lang.microLang.Method
@@ -24,6 +25,8 @@ import java.util.Set
 import org.eclipse.emf.ecore.EObject
 import org.eclipse.emf.ecore.util.EcoreUtil.UsageCrossReferencer
 import org.eclipse.xtext.validation.Check
+import dk.sdu.mdsd.micro_lang.microLang.Element
+import dk.sdu.mdsd.micro_lang.microLang.Endpoint
 
 /**
  * This class contains custom validation rules. 
@@ -46,6 +49,8 @@ class MicroLangValidator extends AbstractMicroLangValidator {
 	
 	public static val ARGUMENT_TYPE_MISMATCH = ISSUE_CODE_PREFIX + 'ArgumentTypeMismatch'
 	
+	public static val DUPLICATE_ENDPOINT = ISSUE_CODE_PREFIX + 'DuplicateEndpoint'
+	
 	public static val PARAMETER_NOT_USED = ISSUE_CODE_PREFIX + 'ParameterNotUsed'
 	
 	public static val INVALID_MICROSERVICE_NAME = ISSUE_CODE_PREFIX + 'InvalidMicroserviceName'
@@ -56,6 +61,9 @@ class MicroLangValidator extends AbstractMicroLangValidator {
 	
 	@Inject
 	extension MicroLangModelUtil
+	
+	@Inject
+	extension MicroLangTemplateResolver
 	
 	@Check
 	def checkSelfNotInUses(Uses uses) {
@@ -193,6 +201,35 @@ class MicroLangValidator extends AbstractMicroLangValidator {
 			NameArgument case argument.target !== null: argument.target.inferType.toSimpleModelName
 			default: argument.toSimpleModelName.substring(0, argument.toSimpleModelName.indexOf('Argument'))
 		}
+	}
+	
+	@Check
+	def checkDuplicateResolvedEndpoints(Element element) {
+		println('element: ' + element.name)
+		element.implements.forEach[resolve]
+		val endpoints = element.implements.flatMap[it.inheritedEndpoints] + element.endpoints
+		element.checkForDuplicateEndpoints(endpoints)
+	}
+	
+	def void checkForDuplicateEndpoints(Element element, Iterable<Endpoint> endpoints) {
+		if (endpoints.nullOrEmpty) {
+			return
+		}
+		val head = endpoints.head
+		val tail = endpoints.tail
+		val duplicates = tail.filter[it.path == head.path].filter[endpoint | // find all endpoints in 'tail' that has the same path as 'head'
+			endpoint.operations.exists[operation | 
+				head.operations.exists[it.method.name == operation.method.name] // for each operation, check if there for each operation in 'head' is one with the same method 
+			]
+		]
+		duplicates.forEach[endpoint | endpoint.operations.forEach[operation | 
+				error('Element contains duplicate endpoints ' + endpoint.path + ' ' + operation.method.name, 
+						element, 
+						epackage.element_Name, 
+						DUPLICATE_ENDPOINT)
+				]
+		]
+		element.checkForDuplicateEndpoints(tail)
 	}
 	
 	@Check
