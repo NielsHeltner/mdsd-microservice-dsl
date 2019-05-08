@@ -116,7 +116,7 @@ class MicroLangValidator extends AbstractMicroLangValidator {
 	}
 	
 	@Check
-	def checkParameterType(Implements implement) {
+	def checkParameterReferencesType(Implements implement) {
 		implement.target.parameters.forEach[parameter | 
 			val inferredType = parameter.inferType
 			parameter.references.filter[!inferredType.class.isInstance(it.EObject)].filter[!(it.EObject instanceof Argument)].forEach[
@@ -147,14 +147,7 @@ class MicroLangValidator extends AbstractMicroLangValidator {
 			argument.isArgumentWellTyped(TypedParameter, NormalPath)
 		}
 		else {
-			val expectedInferredType = argument.correspondingParameter.inferType
-			val actualInferredType = argument.target.inferType
-			if (!expectedInferredType.class.isInstance(actualInferredType)) {
-				error('Type mismatch: expected argument of type ' + expectedInferredType.toSimpleModelName + ' but received argument of type ' + actualInferredType.toSimpleModelName, 
-					argument, 
-					null, 
-					ARGUMENT_TYPE_MISMATCH)
-			}
+			argument.isArgumentWellTyped(argument.target.inferType.class)
 		}
 	}
 	
@@ -162,7 +155,7 @@ class MicroLangValidator extends AbstractMicroLangValidator {
 		val parameter = argument.correspondingParameter
 		val inferredType = parameter.inferType
 		if (!types.exists[type | type.isInstance(inferredType)]) {
-			error('Type mismatch: expected argument of type ' + inferredType.toSimpleModelName + ' but received argument of type ' + argument.toSimpleModelName, 
+			error('Type mismatch: expected argument of type ' + inferredType.toSimpleModelName + ' but received argument of type ' + argument.argToSimpleModelName, 
 					argument, 
 					null, 
 					ARGUMENT_TYPE_MISMATCH)
@@ -171,10 +164,10 @@ class MicroLangValidator extends AbstractMicroLangValidator {
 	
 	def EObject inferType(Parameter parameter) {
 		val references = parameter.references.map[it.EObject]
-		if (references.filter(Argument).nullOrEmpty) { //param not used as arg in this container, type is thus the first usage
+		if (!(references.head instanceof Argument)) { // param's first usage is NOT as argument, thus the type is simply the first usage
 			return references.head
 		}
-		else { //param IS used as arg in this container, recursively follow it until we hit container where it isn't
+		else { // param's first usage is as argument -- recursively follow it until we hit container where it isn't used as argument
 			val inferredTypeCandidates = references.filter(Argument).map[it.correspondingParameter.inferType].filterNull
 			if (inferredTypeCandidates.nullOrEmpty) { // if all candidates are null, it's because the param is never used in the "deepest" layer we could find by following arguments
 				return references.findFirst[!(it instanceof Argument)] // so we try to get the type from the first usage in the current container (the usage that isn't an argument, since that argument only leads to a null)
@@ -193,6 +186,13 @@ class MicroLangValidator extends AbstractMicroLangValidator {
 		val container = argument.eContainer as Implements
 		val index = container.arguments.indexOf(argument)
 		container.target.parameters.get(index)
+	}
+	
+	def argToSimpleModelName(Argument argument) {
+		switch argument {
+			NameArgument case argument.target !== null: argument.target.inferType.toSimpleModelName
+			default: argument.toSimpleModelName.substring(0, argument.toSimpleModelName.indexOf('Argument'))
+		}
 	}
 	
 	@Check
