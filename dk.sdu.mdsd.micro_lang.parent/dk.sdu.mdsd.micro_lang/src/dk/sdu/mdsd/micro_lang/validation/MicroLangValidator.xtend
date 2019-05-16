@@ -7,6 +7,8 @@ import com.google.inject.Inject
 import dk.sdu.mdsd.micro_lang.MicroLangModelUtil
 import dk.sdu.mdsd.micro_lang.MicroLangTemplateResolver
 import dk.sdu.mdsd.micro_lang.microLang.Argument
+import dk.sdu.mdsd.micro_lang.microLang.Element
+import dk.sdu.mdsd.micro_lang.microLang.Endpoint
 import dk.sdu.mdsd.micro_lang.microLang.Implements
 import dk.sdu.mdsd.micro_lang.microLang.Method
 import dk.sdu.mdsd.micro_lang.microLang.MethodArgument
@@ -25,8 +27,6 @@ import java.util.Set
 import org.eclipse.emf.ecore.EObject
 import org.eclipse.emf.ecore.util.EcoreUtil.UsageCrossReferencer
 import org.eclipse.xtext.validation.Check
-import dk.sdu.mdsd.micro_lang.microLang.Element
-import dk.sdu.mdsd.micro_lang.microLang.Endpoint
 
 /**
  * This class contains custom validation rules. 
@@ -143,9 +143,6 @@ class MicroLangValidator extends AbstractMicroLangValidator {
 			]
 		]
 	}
-	
-	// for a path in template (and in general): need to check that path variables to not have the same name as POST typedParams etc
-	// also need to resolve params to check this
 	
 	@Check
 	def checkMethodArgumentUsage(MethodArgument argument) {
