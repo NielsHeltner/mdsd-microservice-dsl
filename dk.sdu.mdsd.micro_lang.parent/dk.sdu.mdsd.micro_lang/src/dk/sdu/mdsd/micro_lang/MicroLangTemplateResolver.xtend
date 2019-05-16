@@ -18,7 +18,7 @@ class MicroLangTemplateResolver {
 	def void resolve(Implements implement) {
 		val args = implement.arguments.map[name]
 		implement.target.parameters.forEach[parameter, index | 
-			find(parameter, parameter.eContainer).forEach[it.EObject.resolve(args.get(index))]
+			find(parameter, parameter.eContainer).forEach[if (index < args.size) it.EObject.resolve(args.get(index))]
 		]
 		implement.target.implements.forEach[resolve]
 	}
